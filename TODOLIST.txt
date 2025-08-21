@@ -1,0 +1,3 @@
+- comprendre ce que sont exactement les lambdas et comment elles fonctionnent en java
+- comprendre ce qu'il faut mettre dans le point d'entrée client et dans le main
+- faire compiler et commencer à coder mdr
