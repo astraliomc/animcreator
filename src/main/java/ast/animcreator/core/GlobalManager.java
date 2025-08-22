@@ -22,6 +22,6 @@ public class GlobalManager {
 
     public static List<Animation> animations = new ArrayList<>();
 
-
+    public static boolean waitingDiscardConfirmation = false;
 
 }

@@ -30,6 +30,9 @@ public class FileStorage {
     public static Path modPath;
     public static Path internalStoragePath;
 
+    public final static String AnimFileExtension = ".anim";
+    public final static String AnimTmpFileExtension = ".tmp";
+
     public static void initModStorageDir() {
 
         Path gamePath = FabricLoader.getInstance().getGameDir();
@@ -59,13 +62,7 @@ public class FileStorage {
         return Files.exists(Path.of(internalStoragePath + "/" + animName + ".anim"));
     }
 
-    public static int saveAnimToFile(Animation animation, ServerCommandSource source) {
-        if (animAlreadyExists(animation.name)) {
-            source.sendFeedback(() -> Text.literal("An animation already exists with name " + animation.name), false);
-            return -1;
-        }
-        Path animFilePath = Path.of(internalStoragePath + "/" + animation.name + ".anim");
-
+    public static int saveAnimToFile(Animation animation, boolean isTemporary, List<String> errors) {
         int nbLines = 0;
         for (Frame frame : animation.getFrames()) {
             nbLines += frame.blocks.size();
@@ -73,16 +70,18 @@ public class FileStorage {
 
         StringBuilder fileContent = new StringBuilder(nbLines * 100);
 
-        //DimensionTypes.OVERWORLD.getValue().toString();
-
         if (animation.world.getDimensionEntry().getKey().isPresent()) {
             fileContent.append(animation.world.getDimensionEntry().getKey().get().getValue().toString()).append('\n');
         }
         else {
-            source.sendFeedback(() -> Text.literal("ERROR FUCKING DIMENSION"), false);
+            errors.add("Can not save file : Unknown dimension");
             return -1;
         }
         for (Frame frame : animation.getFrames()) {
+            if (frame.blocks.isEmpty()) {
+                errors.add("Frame at tick " + frame.tick + " in animation " + animation.name + " has no blocks.");
+                return -1;
+            }
             fileContent.append(frame.tick).append('\n');
             for (FrameBlock frameBlock : frame.blocks) {
                 fileContent.append(frameBlock.blockPos.getX()).append(" ")
@@ -93,46 +92,90 @@ public class FileStorage {
             }
         }
 
-        FileWriter fr = null;
+        FileWriter fr;
+        Path animFilePath = Path.of(internalStoragePath + "/" + animation.name + AnimFileExtension + (isTemporary ? AnimTmpFileExtension : ""));
         try {
             fr = new FileWriter(animFilePath.toFile());
             fr.write(fileContent.toString());
         } catch (IOException e) {
-            source.sendFeedback(() -> Text.literal("Unexpected error while trying to save animation " + animation.name), false);
+            errors.add("Unexpected error while trying to save animation " + animation.name);
             return -1;
         }
 
         try {
             fr.close();
         } catch (IOException e) {
-            source.sendFeedback(() -> Text.literal("Unexpected error while trying to save animation " + animation.name), false);
+            errors.add("Unexpected error while trying to save animation " + animation.name);
+            return -1;
         }
 
-        source.sendFeedback(() -> Text.literal("Successfully saved animation " + animation.name), false);
+        // If there is a tmp anim file with the same name as the one just saved, delete it
+        if (!isTemporary) {
+            Path tmpAnimFilePath = Path.of(internalStoragePath + "/" + animation.name + AnimFileExtension + AnimTmpFileExtension);
+            if (Files.exists(tmpAnimFilePath)) {
+                try {
+                    Files.delete(tmpAnimFilePath);
+                }
+                catch(IOException e) {
+                    e.printStackTrace();
+                    errors.add("Internal error while removing temporary animation file.");
+                    return -1;
+                }
+            }
+        }
+
         return 0;
     }
 
+    public static void saveTmpAnimFile(List<String> errors) {
+        saveAnimToFile(GlobalManager.curAnimation, true, errors);
+    }
+
     public static int loadAllAnimFiles(List<String> errors) {
-        System.out.println(internalStoragePath.toString());
         errors.clear();
+        List<Path> tmpAnimFilesToLoad = new ArrayList<>();
         try {
             Stream<Path> stream = Files.list(internalStoragePath);
             stream.forEach((path) -> {
-                boolean res = loadAnimFile(path, errors);
-                if (!res) {
-                    errors.add("Failed to load anim " + path.getFileName().toString());
+                String fullFileName = path.getFileName().toString();
+                if (fullFileName.endsWith(AnimTmpFileExtension)) {
+                    tmpAnimFilesToLoad.add(path);
+                }
+                else if (fullFileName.endsWith(AnimFileExtension) ){
+                    boolean res = loadAnimFile(path, errors);
+                    if (!res) {
+                        errors.add("Failed to load anim " + path.getFileName().toString());
+                    }
                 }
             });
         }
         catch(IOException e) {
             return -1;
         }
+        // Load tmp files after normal ones. If there are normal and tmp files with the same name,
+        // normal ones will be overriden by tmp ones.
+        for (Path tmpAnimFilePath : tmpAnimFilesToLoad) {
+            boolean res = loadAnimFile(tmpAnimFilePath, errors);
+            if (!res) {
+                errors.add("Failed to load anim " + tmpAnimFilePath.getFileName().toString());
+            }
+        }
         return 0;
     }
 
     public static boolean loadAnimFile(Path filePath, List<String> errors) {
-
-        String filename = filePath.getFileName().toString().substring(0, filePath.getFileName().toString().length() - 5);
+        String fullFilename = filePath.getFileName().toString();
+        String filename;
+        if (fullFilename.endsWith(AnimTmpFileExtension)) {
+            filename = fullFilename.substring(0, fullFilename.length() - (AnimFileExtension.length() + AnimTmpFileExtension.length()));
+        }
+        else if (fullFilename.endsWith(AnimFileExtension)) {
+            filename = fullFilename.substring(0, fullFilename.length() - AnimFileExtension.length());
+        }
+        else {
+            errors.add("File " + fullFilename + " is not an animation file (wrong extension)");
+            return false;
+        }
         System.out.println(filename);
         // Reload all existing animations, except the one that is being created/edited if there is one
         List<Animation> animationsToRemove = new ArrayList<>();
@@ -225,6 +268,7 @@ public class FileStorage {
         if (curFrame != null) {
             animation.addFrame(curFrame);
         }
+        scanner.close();
 
         System.out.println(animation);
         GlobalManager.animations.add(animation);

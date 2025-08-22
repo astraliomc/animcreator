@@ -21,9 +21,11 @@ public class Animation {
     public AnimState prevAnimState = AnimState.NOT_LOADED;
     public boolean forceRestart = false;
 
-    private static int nextTickIdx;
-    private static int tickNextFrame;
-    private static int tickCounter;
+    private int nextTickIdx;
+    private int tickNextFrame;
+    private int tickCounter;
+
+    public boolean editedUnsaved = false;
 
     public Animation(String name, ServerWorld world) {
         this.name = name;
@@ -40,6 +42,7 @@ public class Animation {
         }
         frames.add(f);
         frames.sort(Comparator.comparingInt(f2 -> f2.tick));
+        editedUnsaved = true;
         if (frames.size() == 1) {
             return;
         }
@@ -116,11 +119,9 @@ public class Animation {
 
         if (tickCounter == tickNextFrame) {
             if (nextTickIdx >= frames.size()) {
-                if (loopAnim) {
-                    restart();
-                }
-                else {
-                    stopAnimation(false);
+                restart();
+                if (!loopAnim) {
+                    updateState(AnimState.FINISHED);
                     return;
                 }
             }
@@ -158,13 +159,8 @@ public class Animation {
         }
     }
 
-    public void stopAnimation(boolean fullReset) {
-        if (fullReset) {
-            restartAndClearAllAnimationBlocks();
-        }
-        else {
-            restart();
-        }
+    public void stopAnimation() {
+        restartAndClearAllAnimationBlocks();
         showFrame(0);
         updateState(AnimState.FINISHED);
     }

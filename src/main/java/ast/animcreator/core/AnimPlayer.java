@@ -11,16 +11,18 @@ public class AnimPlayer {
 
     public static void addAnimationToPlay(Animation animation, boolean loopAnim) {
         animation.loopAnim = loopAnim;
+        animation.forceRestart = true;
+
         boolean alreadyExists = false;
         for (Animation animPlaying : animationPlayingList) {
             if (animPlaying.name.equals(animation.name)) {
-                // Animation was already playing, paused or stopped so force restart from the beginning
-                animPlaying.forceRestart = true;
+                System.out.println("already exists!");
                 alreadyExists = true;
                 break;
             }
         }
         if (!alreadyExists) {
+            System.out.println("don't already exist!");
             animationPlayingList.add(animation);
         }
     }
@@ -29,5 +31,9 @@ public class AnimPlayer {
         for (Animation animationPlaying : animationPlayingList) {
             animationPlaying.playAnimation();
         }
+    }
+
+    public static void stopAllAnimations() {
+        animationPlayingList.clear();
     }
 }

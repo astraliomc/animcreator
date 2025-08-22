@@ -48,9 +48,9 @@ public class Frame {
 
     public void saveBlocksInRegion() {
 
-        for (int x = region.cornerMin.getX() ; x < region.cornerMax.getX() ; ++x) {
-            for (int y = region.cornerMin.getY() ; y < region.cornerMax.getY() ; ++y) {
-                for (int z = region.cornerMin.getZ() ; z < region.cornerMax.getZ() ; ++z) {
+        for (int x = region.cornerMin.getX() ; x <= region.cornerMax.getX() ; ++x) {
+            for (int y = region.cornerMin.getY() ; y <= region.cornerMax.getY() ; ++y) {
+                for (int z = region.cornerMin.getZ() ; z <= region.cornerMax.getZ() ; ++z) {
                     BlockPos pos = new BlockPos(x,y,z);
                     BlockState state = animation.world.getBlockState(pos);
                     //TODO regarder s'il y a moyen d'éviter la comparaison de string

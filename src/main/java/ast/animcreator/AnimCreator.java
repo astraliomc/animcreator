@@ -47,6 +47,7 @@ public class AnimCreator implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(Commands::registerCommands);
 		ServerLifecycleEvents.SERVER_STARTING.register(this::onServerStarting);
 		ServerLifecycleEvents.SERVER_STARTED.register(this::onServerStarted);
+		ServerLifecycleEvents.SERVER_STOPPING.register(this::onServerStopped);
 
 		UseItemCallback.EVENT.register(this::onRightClickItem);
 		UseBlockCallback.EVENT.register(this::UseBlockCallback);
@@ -73,6 +74,25 @@ public class AnimCreator implements ModInitializer {
 		for (String error : errors) {
 			System.err.println(error);
 		}
+	}
+
+	private void onServerStopped(MinecraftServer server) {
+		//NOTE maybe consider not stopping all animations when server stops in the future
+		// and instead continue playing where they stopped. But right now I don't see the point
+		// and it is simpler this way.
+		AnimPlayer.stopAllAnimations();
+		// Clear all animations, they will be reloaded when the world is loaded again.
+		GlobalManager.animations.clear();
+
+		if (GlobalManager.curAnimation != null && GlobalManager.curAnimation.editedUnsaved) {
+			// Save current animation in a tmp file
+			List<String> errors = new ArrayList<>();
+			FileStorage.saveTmpAnimFile(errors);
+			for (String error : errors) {
+				System.err.println(error);
+			}
+		}
+		GlobalManager.curAnimation = null;
 	}
 
 	private ActionResult onRightClickItem(PlayerEntity player, World world, Hand hand) {

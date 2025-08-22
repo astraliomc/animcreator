@@ -13,6 +13,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Commands {
 
@@ -68,20 +70,22 @@ public class Commands {
     private static int acNewCommand(CommandContext<ServerCommandSource> context, String animName)
     {
         final ServerCommandSource source = context.getSource();
-        String pathString = source.getServer().getRunDirectory().toString();
-        source.sendFeedback(() -> Text.literal("Run directory : " + pathString), false);
-
-        if (GlobalManager.state == State.CREATING) {
-            source.sendFeedback(() -> Text.literal("Can't create new anim, currently creating one."), false);
-            return -1;
+        if (GlobalManager.curAnimation != null && GlobalManager.curAnimation.editedUnsaved) {
+            if (!GlobalManager.waitingDiscardConfirmation) {
+                source.sendFeedback(() -> Text.literal("Animation " + GlobalManager.curAnimation.name + " was edited but not saved. " +
+                        "Retype the command to discard changes, or run '/ac_save' to validate changes."), false);
+                GlobalManager.waitingDiscardConfirmation = true;
+                return -1;
+            }
         }
-
+        GlobalManager.waitingDiscardConfirmation = false;
         if (FileStorage.animAlreadyExists(animName)) {
-            source.sendFeedback(() -> Text.literal(animName + " already exists."), false);
+            source.sendFeedback(() -> Text.literal("An animation already exists with name " + animName), false);
             return -1;
         }
 
         GlobalManager.player = source.getPlayer();
+        GlobalManager.curRegion = null;
 
         GlobalManager.curAnimation = new Animation(animName, GlobalManager.player.getWorld());
         GlobalManager.state = State.CREATING;
@@ -111,6 +115,7 @@ public class Commands {
 
         Frame frame = new Frame(GlobalManager.curAnimation, tick, GlobalManager.curRegion);
         GlobalManager.curAnimation.addFrame(frame);
+        source.sendFeedback(() -> Text.literal("Frame set for tick " + tick), false);
 
         return 0;
     }
@@ -119,13 +124,22 @@ public class Commands {
         final ServerCommandSource source = context.getSource();
         Animation animation = GlobalManager.curAnimation;
         if (animation == null) {
+            source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
             return -1;
         }
         GlobalManager.state = State.NONE;
         //TODO check que l'anim ait au moins 2 frames
-        if (FileStorage.saveAnimToFile(animation, source) != 0) {
+        List<String> errors = new ArrayList<>();
+        if (FileStorage.saveAnimToFile(animation, false, errors) != 0) {
             source.sendFeedback(() -> Text.literal("Can not save animation " + animation.name), false);
+            for (String error : errors) {
+                source.sendFeedback(() -> Text.literal(error), false);
+            }
+            return -1;
         }
+        source.sendFeedback(() -> Text.literal("Successfully saved animation " + animation.name), false);
+        animation.editedUnsaved = false;
+        GlobalManager.animations.add(animation);
 
         return 0;
     }
@@ -159,7 +173,7 @@ public class Commands {
         final ServerCommandSource source = context.getSource();
         Animation anim = getAnimationFromName(animName, source);
         if (anim != null) {
-            anim.stopAnimation(true);
+            anim.stopAnimation();
         }
 
         return 0;
