@@ -20,13 +20,16 @@ public class Commands {
                                         CommandRegistryAccess registryAccess,
                                         CommandManager.RegistrationEnvironment environment)
     {
-        //TODO ac_rename
-        //     ac_reload
         if (environment.integrated) {
             dispatcher.register(CommandManager.literal("ac_new")
             .requires(source -> source.hasPermissionLevel(2))
             .then(CommandManager.argument("name", StringArgumentType.string())
                 .executes(context -> acNewCommand(context, StringArgumentType.getString(context, "name")))));
+
+            dispatcher.register(CommandManager.literal("ac_edit")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .executes(context -> acEditCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_frame")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -68,15 +71,9 @@ public class Commands {
     private static int acNewCommand(CommandContext<ServerCommandSource> context, String animName)
     {
         final ServerCommandSource source = context.getSource();
-        if (GlobalManager.curAnimation != null && GlobalManager.curAnimation.editedUnsaved) {
-            if (!GlobalManager.waitingDiscardConfirmation) {
-                source.sendFeedback(() -> Text.literal("Animation " + GlobalManager.curAnimation.name + " was edited but not saved. " +
-                        "Retype the command to discard changes, or run '/ac_save' to validate changes."), false);
-                GlobalManager.waitingDiscardConfirmation = true;
-                return -1;
-            }
+        if (checkEditedUnsaved(source) != 0) {
+            return -1;
         }
-        GlobalManager.waitingDiscardConfirmation = false;
         if (FileStorage.animAlreadyExists(animName)) {
             source.sendFeedback(() -> Text.literal("An animation already exists with name " + animName), false);
             return -1;
@@ -92,6 +89,22 @@ public class Commands {
         return 0;
     }
 
+    private static int acEditCommand(CommandContext<ServerCommandSource> context, String animName)
+    {
+        final ServerCommandSource source = context.getSource();
+        if (checkEditedUnsaved(source) != 0) {
+            return -1;
+        }
+        Animation animationToEdit = getAnimationFromName(animName, source);
+        if (animationToEdit != null) {
+            GlobalManager.curAnimation = animationToEdit;
+        }
+        else {
+            return -1;
+        }
+        return 0;
+    }
+
     private static int acFrameCommand(CommandContext<ServerCommandSource> context, Integer tick) {
         final ServerCommandSource source = context.getSource();
 
@@ -102,6 +115,11 @@ public class Commands {
 
         if (GlobalManager.curRegion == null) {
             source.sendFeedback(() -> Text.literal("No region defined for current frame."), false);
+            return -1;
+        }
+
+        if (GlobalManager.curRegion.computeRegionSize() < 2) {
+            source.sendFeedback(() -> Text.literal("Current region is empty."), false);
             return -1;
         }
 
@@ -202,6 +220,23 @@ public class Commands {
         }
         source.sendFeedback(() -> Text.literal("Unknown animation " + animName), false);
         return null;
+    }
+
+    private static int checkEditedUnsaved(ServerCommandSource source) {
+        //NOTE le fait que waitingDiscardConfirmation soit un global fait qu'il n'y a pas de distinction
+        // entre les différentes commandes qui appellent cette méthode. Par ex si on fait ac_new, qu'on a ce
+        // message de warning puis qu'on fait ac_edit, les changements seront perdus.
+        // Voir si il faudrait un autre comportement, pour le moment ça me semble ok.
+        if (GlobalManager.curAnimation != null && GlobalManager.curAnimation.editedUnsaved) {
+            if (!GlobalManager.waitingDiscardConfirmation) {
+                source.sendFeedback(() -> Text.literal("Animation " + GlobalManager.curAnimation.name + " was edited but not saved. " +
+                        "Retype the command to discard changes, or run '/ac_save' to validate changes."), false);
+                GlobalManager.waitingDiscardConfirmation = true;
+                return -1;
+            }
+        }
+        GlobalManager.waitingDiscardConfirmation = false;
+        return 0;
     }
 }
 
