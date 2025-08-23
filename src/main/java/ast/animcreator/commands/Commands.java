@@ -1,7 +1,6 @@
 package ast.animcreator.commands;
 
 import ast.animcreator.core.*;
-import ast.animcreator.core.enums.State;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -12,7 +11,6 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,7 +86,6 @@ public class Commands {
         GlobalManager.curRegion = null;
 
         GlobalManager.curAnimation = new Animation(animName, GlobalManager.player.getWorld());
-        GlobalManager.state = State.CREATING;
 
         source.sendFeedback(() -> Text.literal("Anim " + animName + " initialized."), false);
 
@@ -127,7 +124,6 @@ public class Commands {
             source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
             return -1;
         }
-        GlobalManager.state = State.NONE;
         //TODO check que l'anim ait au moins 2 frames
         List<String> errors = new ArrayList<>();
         if (FileStorage.saveAnimToFile(animation, false, errors) != 0) {
@@ -148,7 +144,6 @@ public class Commands {
         final ServerCommandSource source = context.getSource();
         Animation animationToPlay = getAnimationFromName(animName, source);
         if (animationToPlay != null) {
-            GlobalManager.state = State.PLAYING;
             AnimPlayer.addAnimationToPlay(animationToPlay, loop);
         }
         else {

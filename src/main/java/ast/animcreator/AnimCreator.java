@@ -2,7 +2,6 @@ package ast.animcreator;
 
 import ast.animcreator.commands.Commands;
 import ast.animcreator.core.*;
-import ast.animcreator.core.enums.State;
 import ast.animcreator.item.ModItems;
 import net.fabricmc.api.ModInitializer;
 
@@ -12,7 +11,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.loader.impl.util.log.ConsoleLogHandler;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
@@ -97,7 +95,7 @@ public class AnimCreator implements ModInitializer {
 
 	private ActionResult onRightClickItem(PlayerEntity player, World world, Hand hand) {
 		if (!world.isClient) {
-			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC) || GlobalManager.state != State.CREATING) {
+			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC)) {
 				return ActionResult.PASS;
 			}
 
@@ -124,7 +122,7 @@ public class AnimCreator implements ModInitializer {
 
 	private ActionResult AttackBlockCallback(PlayerEntity player, World world, Hand hand, BlockPos pos, Direction direction) {
 		if (!world.isClient) {
-			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC) || GlobalManager.state != State.CREATING) {
+			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC)) {
 				return ActionResult.PASS;
 			}
 

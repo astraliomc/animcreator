@@ -1,6 +1,5 @@
 package ast.animcreator.core;
 
-import ast.animcreator.core.enums.AnimState;
 import ast.animcreator.utils.Utils;
 import net.minecraft.block.Blocks;
 import net.minecraft.server.world.ServerWorld;
@@ -17,8 +16,7 @@ public class Animation {
     public ServerWorld world;
 
     public boolean loopAnim;
-    public AnimState animState = AnimState.NOT_LOADED;
-    public AnimState prevAnimState = AnimState.NOT_LOADED;
+    private boolean canPlay;
     public boolean forceRestart = false;
 
     private int nextTickIdx;
@@ -31,8 +29,6 @@ public class Animation {
         this.name = name;
         this.world = world;
         this.loopAnim = false;
-        this.animState = AnimState.PLAYING;
-        this.prevAnimState = AnimState.NOT_LOADED;
         restart();
     }
 
@@ -78,7 +74,7 @@ public class Animation {
         tickCounter = 0;
         nextTickIdx = 0;
         tickNextFrame = 0;
-        updateState(AnimState.PLAYING);
+        canPlay = true;
     }
 
     public void restartAndClearAllAnimationBlocks() {
@@ -113,7 +109,7 @@ public class Animation {
             restartAndClearAllAnimationBlocks();
         }
         //TODO je pense que je peux remplacer cet enum par un bool 'isPlaying' en tout cas pour le moment c'est le cas
-        if (animState != AnimState.PLAYING) {
+        if (!canPlay) {
             return;
         }
 
@@ -121,7 +117,7 @@ public class Animation {
             if (nextTickIdx >= frames.size()) {
                 restart();
                 if (!loopAnim) {
-                    updateState(AnimState.FINISHED);
+                    canPlay = false;
                     return;
                 }
             }
@@ -132,7 +128,6 @@ public class Animation {
             ++nextTickIdx;
         }
         ++tickCounter;
-        updateState(AnimState.PLAYING);
     }
 
     private void showFrame(int frameIdx) {
@@ -151,23 +146,13 @@ public class Animation {
     }
 
     public void togglePauseAnimation() {
-        if (animState == AnimState.PLAYING) {
-            animState = AnimState.PAUSED;
-        }
-        else if (animState == AnimState.PAUSED) {
-            animState = AnimState.PLAYING;
-        }
+        canPlay = !canPlay;
     }
 
     public void stopAnimation() {
         restartAndClearAllAnimationBlocks();
         showFrame(0);
-        updateState(AnimState.FINISHED);
-    }
-
-    private void updateState(AnimState newState) {
-        prevAnimState = animState;
-        animState = newState;
+        canPlay = false;
     }
 
     @Override

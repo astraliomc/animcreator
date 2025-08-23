@@ -1,6 +1,5 @@
 package ast.animcreator.core;
 
-import ast.animcreator.core.enums.State;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -12,7 +11,6 @@ public class GlobalManager {
 
     //NOTE si je veux supporter le multijoueur il faudrait faire une association 1 joueur -> 1 anim
     public static ServerPlayerEntity player;
-    public static State state = State.NONE;
     public static Region curRegion = null;
 
     //NOTE pour le moment on ne peut charger qu'une seule animation à la fois
