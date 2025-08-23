@@ -13,13 +13,18 @@ public class GlobalManager {
     public static ServerPlayerEntity player;
     public static Region curRegion = null;
 
-    //NOTE pour le moment on ne peut charger qu'une seule animation à la fois
     public static Animation curAnimation = null;
 
     public final static Integer MAX_REGION_SIZE = 65536;
 
+    //NOTE don't call add on this variable but the method addAnimation
     public static List<Animation> animations = new ArrayList<>();
 
     public static boolean waitingDiscardConfirmation = false;
+
+    public static void addAnimation(Animation animation) {
+        animation.editedUnsaved = false;
+        animations.add(animation);
+    }
 
 }

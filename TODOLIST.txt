@@ -1,5 +1,10 @@
 - XT quand on fait ac_new et qu'on n'a pas sauvegadé l'animation courante, mettre un warning
-- ac_delete, ac_edit, ac_rename, ac_export, ac_discard
+- ac_delete
+- XT ac_edit
+- ac_rename <old_name> <new_name>
+- ac_export
+- ac_discard : annuler les changements depuis la dernière save. S'il n'y en a pas suppr l'animation en cours de création
+- ac_delframe <tick> : suppr une frame
 - objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
 
 - X quand on quitte le monde et qu'il y a une animation en cours :
@@ -13,3 +18,5 @@ sur cette dernière quand on recharge le monde ? pour le moment non mais ce sera
 - liste de suggestions quand on tape une commande /ac qui contient la liste de toutes les animations chargées
 - XT ne plus remettre l'animation dans sa position initiale quand on la joue sans mode loop
 - XT supprimer les enums state
+- XT items custom pour les fonctionnalités avec clic droit
+- XT voir pour faire une commande ac_unpause

@@ -271,7 +271,7 @@ public class FileStorage {
         scanner.close();
 
         System.out.println(animation);
-        GlobalManager.animations.add(animation);
+        GlobalManager.addAnimation(animation);
         return true;
     }
 }

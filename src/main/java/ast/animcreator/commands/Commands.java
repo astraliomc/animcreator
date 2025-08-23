@@ -60,6 +60,12 @@ public class Commands {
                     .then(CommandManager.argument("name", StringArgumentType.string())
                             .executes(context -> acPauseCommand(context, StringArgumentType.getString(context, "name")))));
 
+            dispatcher.register(CommandManager.literal("ac_resume")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .executes(context -> acResumeCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .executes(context -> acResumeCommand(context, StringArgumentType.getString(context, "name")))));
+
             dispatcher.register(CommandManager.literal("ac_stop")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acStopCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
@@ -152,8 +158,7 @@ public class Commands {
             return -1;
         }
         source.sendFeedback(() -> Text.literal("Successfully saved animation " + animation.name), false);
-        animation.editedUnsaved = false;
-        GlobalManager.animations.add(animation);
+        GlobalManager.addAnimation(animation);
 
         return 0;
     }
@@ -175,7 +180,17 @@ public class Commands {
         final ServerCommandSource source = context.getSource();
         Animation anim = getAnimationFromName(animName, source);
         if (anim != null) {
-            anim.togglePauseAnimation();
+            anim.pauseAnimation();
+        }
+
+        return 0;
+    }
+
+    private static int acResumeCommand(CommandContext<ServerCommandSource> context, String animName) {
+        final ServerCommandSource source = context.getSource();
+        Animation anim = getAnimationFromName(animName, source);
+        if (anim != null) {
+            anim.resumeAnimation();
         }
 
         return 0;

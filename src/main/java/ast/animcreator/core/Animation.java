@@ -20,7 +20,6 @@ public class Animation {
     public boolean forceRestart = false;
 
     private int nextTickIdx;
-    private int tickNextFrame;
     private int tickCounter;
 
     public boolean editedUnsaved = false;
@@ -45,12 +44,9 @@ public class Animation {
         for (int frameIdx = 0 ; frameIdx < frames.size() ; ++frameIdx) {
             Frame frame = frames.get(frameIdx);
             if (frame == f) {
-                System.out.println("update blocks to remove for frame " + frameIdx);
                 Frame prevFrame = (frameIdx != 0 ? frames.get(frameIdx - 1) : frames.get(frames.size() - 1));
                 Frame nextFrame = frames.get((frameIdx + 1) % frames.size());
-                System.out.println("update cur with prev");
                 frame.updateBlocksToRemove(prevFrame);
-                System.out.println("update next with cur");
                 nextFrame.updateBlocksToRemove(frame);
                 break;
             }
@@ -73,7 +69,6 @@ public class Animation {
     public void restart() {
         tickCounter = 0;
         nextTickIdx = 0;
-        tickNextFrame = 0;
         canPlay = true;
     }
 
@@ -108,12 +103,11 @@ public class Animation {
             forceRestart = false;
             restartAndClearAllAnimationBlocks();
         }
-        //TODO je pense que je peux remplacer cet enum par un bool 'isPlaying' en tout cas pour le moment c'est le cas
         if (!canPlay) {
             return;
         }
 
-        if (tickCounter == tickNextFrame) {
+        if (nextTickIdx == 0 || tickCounter == frames.get(nextTickIdx - 1).tick) {
             if (nextTickIdx >= frames.size()) {
                 restart();
                 if (!loopAnim) {
@@ -124,35 +118,60 @@ public class Animation {
 
             showFrame(nextTickIdx);
 
-            tickNextFrame = frames.get(nextTickIdx).tick;
             ++nextTickIdx;
         }
         ++tickCounter;
     }
 
     private void showFrame(int frameIdx) {
-        System.out.println("frame idx " + frameIdx);
         Frame newFrame = frames.get(frameIdx);
-        System.out.println("nb blocks to remove " + newFrame.blocksToRemove.size());
         for (FrameBlock frame : newFrame.blocksToRemove) {
-            System.out.println("removing block " + frame.blockPos.getX() + ";" + frame.blockPos.getY() + ";" + frame.blockPos.getZ());
             world.setBlockState(frame.blockPos, Blocks.AIR.getDefaultState());
         }
-        System.out.println("nb blocks to set " + newFrame.blocks.size());
         for (FrameBlock frame : newFrame.blocks) {
-            System.out.println("set block " + frame.blockPos.getX() + ";" + frame.blockPos.getY() + ";" + frame.blockPos.getZ());
             world.setBlockState(frame.blockPos, frame.blockState);
         }
     }
 
-    public void togglePauseAnimation() {
-        canPlay = !canPlay;
+    public void pauseAnimation() {
+        canPlay = false;
+    }
+
+    public void resumeAnimation() {
+        canPlay = true;
     }
 
     public void stopAnimation() {
         restartAndClearAllAnimationBlocks();
         showFrame(0);
         canPlay = false;
+    }
+
+    public void advanceOneFrame() {
+        //NOTE clearAllAnimationBlocks is slow but this method is not real-time
+        // just check if it is not TOO slow with a large animation
+        clearAllAnimationBlocks();
+        ++nextTickIdx;
+        if (nextTickIdx < frames.size()) {
+            tickCounter = frames.get(nextTickIdx - 1).tick;
+        }
+        else {
+            tickCounter = 0;
+            nextTickIdx = 0;
+        }
+        showFrame(nextTickIdx);
+    }
+
+    public void goBackOneFrame() {
+        clearAllAnimationBlocks();
+        nextTickIdx = (nextTickIdx == 0 ? frames.size() - 1 : nextTickIdx - 1);
+        if (nextTickIdx > 0) {
+            tickCounter = frames.get(nextTickIdx - 1).tick;
+        }
+        else {
+            tickCounter = frames.get(nextTickIdx).tick;
+        }
+        showFrame(nextTickIdx);
     }
 
     @Override
@@ -169,5 +188,9 @@ public class Animation {
             }
         }
         return str.toString();
+    }
+
+    public boolean canPlay() {
+        return canPlay;
     }
 }

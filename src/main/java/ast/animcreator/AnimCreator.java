@@ -95,23 +95,15 @@ public class AnimCreator implements ModInitializer {
 
 	private ActionResult onRightClickItem(PlayerEntity player, World world, Hand hand) {
 		if (!world.isClient) {
-			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC)) {
-				return ActionResult.PASS;
+			if (player.getInventory().getSelectedStack().isOf(Items.LIME_DYE)) {
+				return ItemEvents.regionSelection(player);
 			}
-
-			HitResult blockHit = player.raycast(20.0, 0.0f, false);
-			if (blockHit.getType() == HitResult.Type.BLOCK) {
-				BlockPos pos = ((BlockHitResult) blockHit).getBlockPos();
-
-				player.sendMessage(Text.literal("Second region corner set at [" + pos.getX() + ";" + pos.getY() + ";" + pos.getZ() + "]"), false);
-				curRegionSecond = pos;
-				if (curRegionFirst != null) {
-					GlobalManager.curRegion = new Region(curRegionFirst, curRegionSecond);
-					player.sendMessage(Text.literal("Total region size : " + GlobalManager.curRegion.computeRegionSize()), false);
-				}
+			else if (player.getInventory().getSelectedStack().isOf(Items.BLAZE_ROD)) {
+				return ItemEvents.showNextFrameEvent(player);
 			}
-
-			return ActionResult.SUCCESS;
+			else if (player.getInventory().getSelectedStack().isOf(Items.BREEZE_ROD)) {
+				return ItemEvents.showPrevFrameEvent(player);
+			}
 		}
 		return ActionResult.PASS;
 	}

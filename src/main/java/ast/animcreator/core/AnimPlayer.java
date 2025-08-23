@@ -36,4 +36,13 @@ public class AnimPlayer {
     public static void stopAllAnimations() {
         animationPlayingList.clear();
     }
+
+    public static boolean isAnimationPlaying(String animName) {
+        for (Animation animationPlaying : animationPlayingList) {
+            if (animationPlaying.name.equals(animName) && animationPlaying.canPlay()) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
