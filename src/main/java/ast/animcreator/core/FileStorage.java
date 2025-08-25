@@ -64,7 +64,15 @@ public class FileStorage {
     }
 
     public static Path getAnimationPathFromName(String animName) {
-        return Path.of(internalStoragePath + "/" + animName + AnimFileExtension);
+        Path animPath = Path.of(internalStoragePath + "/" + animName + AnimFileExtension);
+        if (Files.exists(animPath)) {
+            return animPath;
+        }
+        Path tmpAnimPath = Path.of(animPath + AnimTmpFileExtension);
+        if (Files.exists(tmpAnimPath)) {
+            return tmpAnimPath;
+        }
+        return null;
     }
 
     public static Path getTmpAnimationPathFromName(String animName) {
@@ -173,12 +181,12 @@ public class FileStorage {
     }
 
     public static boolean loadAnimFile(String animName, List<String> errors) {
-        Path animFilepath = FileStorage.getAnimationPathFromName(animName);
-        if (!FileStorage.loadAnimFile(animFilepath, errors)) {
-            Path tmpAnimFilepath = FileStorage.getTmpAnimationPathFromName(animName);
-            return FileStorage.loadAnimFile(tmpAnimFilepath, errors);
+        Path animFilepath = getAnimationPathFromName(animName);
+        if (animFilepath == null) {
+            errors.add("Animation " + animName + "does not exist on disk.");
+            return false;
         }
-        return true;
+        return FileStorage.loadAnimFile(animFilepath, errors);
     }
 
     private static boolean loadAnimFile(Path filePath, List<String> errors) {
@@ -290,6 +298,48 @@ public class FileStorage {
 
         System.out.println(animation);
         GlobalManager.addAnimation(animation);
+        return true;
+    }
+
+    public static boolean deleteAnimFile(String animName, List<String> errors) {
+        Path animFilePath = FileStorage.getAnimationPathFromName(animName);
+        if (animFilePath == null) {
+            errors.add("Animation " + animName + "does not exist on disk.");
+            return false;
+        }
+
+        try {
+            Files.delete(animFilePath);
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+            errors.add("Internal error while removing animation file.");
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean renameAnimFile(String oldName, String newName, List<String> errors) {
+        Path oldAnimFilePath = FileStorage.getAnimationPathFromName(oldName);
+        if (oldAnimFilePath == null) {
+            errors.add("Animation " + oldName + "does not exist on disk.");
+            return false;
+        }
+
+        String newPathStr = internalStoragePath + "/" + newName + AnimFileExtension;
+        if (oldAnimFilePath.getFileName().toString().endsWith(AnimTmpFileExtension)) {
+            newPathStr += AnimTmpFileExtension;
+        }
+
+        Path newAnimFilePath = Path.of(newPathStr);
+        try {
+            Files.move(oldAnimFilePath, newAnimFilePath);
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+            errors.add("Internal error while renaming animation file.");
+            return false;
+        }
         return true;
     }
 }

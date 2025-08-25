@@ -30,7 +30,7 @@ public class GlobalManager {
     public static void removeAnimation(Animation animation) {
         animation.clearAllAnimationBlocks();
         GlobalManager.animations.remove(animation);
-        AnimPlayer.removeAnimtionPlaying(animation);
+        AnimPlayer.removeAnimationPlaying(animation);
         if (animation == GlobalManager.curAnimation) {
             GlobalManager.curAnimation = null;
         }

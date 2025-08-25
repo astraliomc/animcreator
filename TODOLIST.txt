@@ -8,7 +8,7 @@
 - ac_list : afficher le nom de toutes les animations chargées avec la current mise en évidence
 - objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
 
-- X quand on quitte le monde et qu'il y a une animation en cours :
+- XT quand on quitte le monde et qu'il y a une animation en cours :
  1) la sauvegarder dans un fichier .anim.tmp
  2) quand on relance le monde, charger l'animation à partir de ce fichier
  (il peut y avoir plusieurs tmp on sait jamais même si en vrai en y pensant ça n'aurait pas trop de sens pour le moment en tout cas)

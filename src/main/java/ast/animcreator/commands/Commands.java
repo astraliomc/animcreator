@@ -12,7 +12,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +31,18 @@ public class Commands {
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
                             .executes(context -> acEditCommand(context, StringArgumentType.getString(context, "name")))));
+
+            dispatcher.register(CommandManager.literal("ac_rename")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("old_name", StringArgumentType.string())
+                    .then(CommandManager.argument("new_name", StringArgumentType.string())
+                            .executes(context -> acRenameCommand(context, StringArgumentType.getString(context, "old_name"), StringArgumentType.getString(context, "new_name"))))));
+
+
+            dispatcher.register(CommandManager.literal("ac_delete")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .executes(context -> acDeleteCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_discard")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -82,6 +93,10 @@ public class Commands {
                     .executes(context -> acStopCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
                     .then(CommandManager.argument("name", StringArgumentType.string())
                             .executes(context -> acStopCommand(context, StringArgumentType.getString(context, "name")))));
+
+            dispatcher.register(CommandManager.literal("ac_list")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .executes(Commands::acListCommand));
         }
     }
 
@@ -120,6 +135,52 @@ public class Commands {
             return -1;
         }
         source.sendFeedback(() -> Text.literal("Start editing animation " + animName), false);
+        return 0;
+    }
+
+    private static int acRenameCommand(CommandContext<ServerCommandSource> context, String oldName, String newName) {
+        final ServerCommandSource source = context.getSource();
+        Animation animationToRename = getAnimationFromName(oldName, source);
+        if (animationToRename != null) {
+            List<String> errors = new ArrayList<>();
+            if (FileStorage.renameAnimFile(oldName, newName, errors)) {
+                source.sendFeedback(() -> Text.literal("Successfully renamed animation from " + oldName + " to " + newName), false);
+                animationToRename.name = newName;
+            }
+            else {
+                for (String error : errors) {
+                    source.sendFeedback(() -> Text.literal(error), false);
+                }
+                return -1;
+            }
+        }
+        else {
+            return -1;
+        }
+        return 0;
+    }
+
+    private static int acDeleteCommand(CommandContext<ServerCommandSource> context, String animName)
+    {
+        //NOTE maybe force player to type the command twice as a confirmation ?
+        final ServerCommandSource source = context.getSource();
+        Animation animationToDelete = getAnimationFromName(animName, source);
+        if (animationToDelete != null) {
+            GlobalManager.removeAnimation(animationToDelete);
+            List<String> errors = new ArrayList<>();
+            if (FileStorage.deleteAnimFile(animName, errors)) {
+                source.sendFeedback(() -> Text.literal("Successfully deleted animation " + animName), false);
+            }
+            else {
+                for (String error : errors) {
+                    source.sendFeedback(() -> Text.literal(error), false);
+                }
+                return -1;
+            }
+        }
+        else {
+            return -1;
+        }
         return 0;
     }
 
@@ -260,6 +321,24 @@ public class Commands {
             source.sendFeedback(() -> Text.literal(animStr), false);
         }
 
+        return 0;
+    }
+
+    private static int acListCommand(CommandContext<ServerCommandSource> context) {
+        final ServerCommandSource source = context.getSource();
+        StringBuilder animList = new StringBuilder();
+        animList.append("Loaded animations :\n");
+        for (Animation animation : GlobalManager.animations) {
+            animList.append(animation.name);
+            if (AnimPlayer.isAnimationPlaying(animation.name)) {
+                animList.append(" (playing) ");
+            }
+            if (GlobalManager.curAnimation != null && animation.name.equals(GlobalManager.curAnimation.name)) {
+                animList.append(" (current) ");
+            }
+            animList.append("\n");
+        }
+        source.sendFeedback(() -> Text.literal(animList.toString()), false);
         return 0;
     }
 
