@@ -27,4 +27,12 @@ public class GlobalManager {
         animations.add(animation);
     }
 
+    public static void removeAnimation(Animation animation) {
+        animation.clearAllAnimationBlocks();
+        GlobalManager.animations.remove(animation);
+        AnimPlayer.removeAnimtionPlaying(animation);
+        if (animation == GlobalManager.curAnimation) {
+            GlobalManager.curAnimation = null;
+        }
+    }
 }

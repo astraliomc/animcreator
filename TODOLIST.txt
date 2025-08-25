@@ -3,8 +3,9 @@
 - XT ac_edit
 - ac_rename <old_name> <new_name>
 - ac_export
-- ac_discard : annuler les changements depuis la dernière save. S'il n'y en a pas suppr l'animation en cours de création
-- ac_delframe <tick> : suppr une frame
+- XT ac_discard : annuler les changements depuis la dernière save. S'il n'y en a pas (de save) suppr l'animation en cours de création
+- XT ac_rframe <tick> : suppr une frame
+- ac_list : afficher le nom de toutes les animations chargées avec la current mise en évidence
 - objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
 
 - X quand on quitte le monde et qu'il y a une animation en cours :
@@ -20,3 +21,8 @@ sur cette dernière quand on recharge le monde ? pour le moment non mais ce sera
 - XT supprimer les enums state
 - XT items custom pour les fonctionnalités avec clic droit
 - XT voir pour faire une commande ac_unpause
+- fonctionnalité pour programmer l'exécution de plusieurs animations à une tick donnée
+
+- mettre en évidence la curAnimation en affichant côté client la hitbox de la région de la frame courante de l'animation courante
+- ajouter un objet qui permet de voir le nom de toutes les animations chargées au-dessus de là ou elles sont (label au milieu du
+  haut de la hitbox de la 1e frame ?)

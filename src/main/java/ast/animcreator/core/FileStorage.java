@@ -58,8 +58,17 @@ public class FileStorage {
         }
     }
 
-    public static boolean animAlreadyExists(String animName) {
-        return Files.exists(Path.of(internalStoragePath + "/" + animName + ".anim"));
+    public static boolean animExistsOnDisk(String animName) {
+        return Files.exists(Path.of(internalStoragePath + "/" + animName + AnimFileExtension)) ||
+                Files.exists(Path.of(internalStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension));
+    }
+
+    public static Path getAnimationPathFromName(String animName) {
+        return Path.of(internalStoragePath + "/" + animName + AnimFileExtension);
+    }
+
+    public static Path getTmpAnimationPathFromName(String animName) {
+        return Path.of(internalStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension);
     }
 
     public static int saveAnimToFile(Animation animation, boolean isTemporary, List<String> errors) {
@@ -163,7 +172,16 @@ public class FileStorage {
         return 0;
     }
 
-    public static boolean loadAnimFile(Path filePath, List<String> errors) {
+    public static boolean loadAnimFile(String animName, List<String> errors) {
+        Path animFilepath = FileStorage.getAnimationPathFromName(animName);
+        if (!FileStorage.loadAnimFile(animFilepath, errors)) {
+            Path tmpAnimFilepath = FileStorage.getTmpAnimationPathFromName(animName);
+            return FileStorage.loadAnimFile(tmpAnimFilepath, errors);
+        }
+        return true;
+    }
+
+    private static boolean loadAnimFile(Path filePath, List<String> errors) {
         String fullFilename = filePath.getFileName().toString();
         String filename;
         if (fullFilename.endsWith(AnimTmpFileExtension)) {
@@ -177,7 +195,7 @@ public class FileStorage {
             return false;
         }
         System.out.println(filename);
-        // Reload all existing animations, except the one that is being created/edited if there is one
+        // Reload existing animation, except the one that is being created/edited if there is one
         List<Animation> animationsToRemove = new ArrayList<>();
         for (Animation existingAnimation : GlobalManager.animations) {
             if (existingAnimation.name.equals(filename) && existingAnimation != GlobalManager.curAnimation) {

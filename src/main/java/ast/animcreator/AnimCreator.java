@@ -20,7 +20,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
@@ -96,7 +95,7 @@ public class AnimCreator implements ModInitializer {
 	private ActionResult onRightClickItem(PlayerEntity player, World world, Hand hand) {
 		if (!world.isClient) {
 			if (player.getInventory().getSelectedStack().isOf(Items.LIME_DYE)) {
-				return ItemEvents.regionSelection(player);
+				return ItemEvents.secondRegionSelection(player);
 			}
 			else if (player.getInventory().getSelectedStack().isOf(Items.BLAZE_ROD)) {
 				return ItemEvents.showNextFrameEvent(player);
@@ -114,25 +113,13 @@ public class AnimCreator implements ModInitializer {
 
 	private ActionResult AttackBlockCallback(PlayerEntity player, World world, Hand hand, BlockPos pos, Direction direction) {
 		if (!world.isClient) {
-			if (!player.getInventory().getSelectedStack().isOf(Items.INK_SAC)) {
-				return ActionResult.PASS;
+			if (player.getInventory().getSelectedStack().isOf(Items.LIME_DYE)) {
+				return ItemEvents.firstRegionSelection(player, world, pos);
 			}
-
-			BlockState blockState = world.getBlockState(pos);
-			world.setBlockState(pos, blockState);
-
-			player.sendMessage(Text.literal("First region corner set at [" + pos.getX() + ";" + pos.getY() + ";" + pos.getZ() + "]"), false);
-			curRegionFirst = pos;
-			if (curRegionSecond != null) {
-				GlobalManager.curRegion = new Region(curRegionFirst, curRegionSecond);
-				player.sendMessage(Text.literal("Total region size : " + GlobalManager.curRegion.computeRegionSize()), false);
-			}
-
-			return ActionResult.SUCCESS;
+			return ActionResult.PASS;
 		}
 		else {
 			return ActionResult.PASS;
 		}
 	}
-
 }

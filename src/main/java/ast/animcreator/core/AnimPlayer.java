@@ -45,4 +45,8 @@ public class AnimPlayer {
         }
         return false;
     }
+
+    public static void removeAnimtionPlaying(Animation animation) {
+        animationPlayingList.remove(animation);
+    }
 }

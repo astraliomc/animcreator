@@ -1,7 +1,7 @@
 package ast.animcreator.core;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -15,7 +15,21 @@ public class ItemEvents {
     private static BlockPos curRegionFirst;
     private static BlockPos curRegionSecond;
 
-    public static ActionResult regionSelection(PlayerEntity player) {
+    public static ActionResult firstRegionSelection(PlayerEntity player, World world, BlockPos pos) {
+        BlockState blockState = world.getBlockState(pos);
+        world.setBlockState(pos, blockState);
+
+        player.sendMessage(Text.literal("First region corner set at [" + pos.getX() + ";" + pos.getY() + ";" + pos.getZ() + "]"), false);
+        curRegionFirst = pos;
+        if (curRegionSecond != null) {
+            GlobalManager.curRegion = new Region(curRegionFirst, curRegionSecond);
+            player.sendMessage(Text.literal("Total region size : " + GlobalManager.curRegion.computeRegionSize()), false);
+        }
+
+        return ActionResult.SUCCESS;
+    }
+
+    public static ActionResult secondRegionSelection(PlayerEntity player) {
         HitResult blockHit = player.raycast(20.0, 0.0f, false);
         if (blockHit.getType() == HitResult.Type.BLOCK) {
             BlockPos pos = ((BlockHitResult) blockHit).getBlockPos();
@@ -39,7 +53,9 @@ public class ItemEvents {
             player.sendMessage(Text.literal("Current animation is playing. Pause it or stop it to show individual frames."), false);
             return ActionResult.PASS;
         }
-        GlobalManager.curAnimation.advanceOneFrame();
+        GlobalManager.curAnimation.forceAdvanceOneFrame();
+
+        player.sendMessage(Text.literal(GlobalManager.curAnimation.getCurFrameInfo()), true);
 
         return ActionResult.SUCCESS;
     }
@@ -53,7 +69,9 @@ public class ItemEvents {
             player.sendMessage(Text.literal("Current animation is playing. Pause it or stop it to show individual frames."), false);
             return ActionResult.PASS;
         }
-        GlobalManager.curAnimation.goBackOneFrame();
+        GlobalManager.curAnimation.forceGoBackOneFrame();
+
+        player.sendMessage(Text.literal(GlobalManager.curAnimation.getCurFrameInfo()), true);
 
         return ActionResult.SUCCESS;
     }

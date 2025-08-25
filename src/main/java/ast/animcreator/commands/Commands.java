@@ -10,7 +10,9 @@ import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.ActionResult;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,10 +33,19 @@ public class Commands {
                     .then(CommandManager.argument("name", StringArgumentType.string())
                             .executes(context -> acEditCommand(context, StringArgumentType.getString(context, "name")))));
 
+            dispatcher.register(CommandManager.literal("ac_discard")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .executes(Commands::acDiscardCommand));
+
             dispatcher.register(CommandManager.literal("ac_frame")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("tick", IntegerArgumentType.integer())
                             .executes(context -> acFrameCommand(context, IntegerArgumentType.getInteger(context, "tick")))));
+
+            dispatcher.register(CommandManager.literal("ac_rframe")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("tick", IntegerArgumentType.integer())
+                            .executes(context -> acRframeCommand(context, IntegerArgumentType.getInteger(context, "tick")))));
 
             dispatcher.register(CommandManager.literal("ac_save")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -80,7 +91,7 @@ public class Commands {
         if (checkEditedUnsaved(source) != 0) {
             return -1;
         }
-        if (FileStorage.animAlreadyExists(animName)) {
+        if (FileStorage.animExistsOnDisk(animName)) {
             source.sendFeedback(() -> Text.literal("An animation already exists with name " + animName), false);
             return -1;
         }
@@ -108,7 +119,24 @@ public class Commands {
         else {
             return -1;
         }
+        source.sendFeedback(() -> Text.literal("Start editing animation " + animName), false);
         return 0;
+    }
+
+    private static int acDiscardCommand(CommandContext<ServerCommandSource> context) {
+        final ServerCommandSource source = context.getSource();
+
+        if (GlobalManager.curAnimation == null) {
+            source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
+            return -1;
+        }
+
+        if (AnimPlayer.isAnimationPlaying(GlobalManager.curAnimation.name)) {
+            source.sendFeedback(() -> Text.literal("Current animation is playing. Pause it or stop it before using this command."), false);
+            return -1;
+        }
+
+        return discardChanges(source);
     }
 
     private static int acFrameCommand(CommandContext<ServerCommandSource> context, Integer tick) {
@@ -129,7 +157,7 @@ public class Commands {
             return -1;
         }
 
-        if (GlobalManager.curAnimation.frameTickAlreadyExists(tick)) {
+        if (GlobalManager.curAnimation.getFrameForTick(tick) != null) {
             source.sendFeedback(() -> Text.literal("A frame already exists for tick " + tick), false);
             return -1;
         }
@@ -138,6 +166,23 @@ public class Commands {
         GlobalManager.curAnimation.addFrame(frame);
         source.sendFeedback(() -> Text.literal("Frame set for tick " + tick), false);
 
+        return 0;
+    }
+
+    private static int acRframeCommand(CommandContext<ServerCommandSource> context, Integer tick) {
+        final ServerCommandSource source = context.getSource();
+
+        if (GlobalManager.curAnimation == null) {
+            source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
+            return -1;
+        }
+
+        if (!GlobalManager.curAnimation.removeFrame(tick)) {
+            source.sendFeedback(() -> Text.literal("There is no frame for tick " + tick), false);
+            return -1;
+        }
+
+        source.sendFeedback(() -> Text.literal("Removed frame for tick " + tick), false);
         return 0;
     }
 
@@ -249,8 +294,40 @@ public class Commands {
                 GlobalManager.waitingDiscardConfirmation = true;
                 return -1;
             }
+            else {
+                discardChanges(source);
+            }
         }
         GlobalManager.waitingDiscardConfirmation = false;
+        return 0;
+    }
+
+    private static int discardChanges(ServerCommandSource source) {
+        String animName = GlobalManager.curAnimation.name;
+        GlobalManager.removeAnimation(GlobalManager.curAnimation);
+        if (!FileStorage.animExistsOnDisk(animName)) {
+            source.sendFeedback(() -> Text.literal("Discarded animation " + animName), false);
+        }
+        else {
+            List<String> errors = new ArrayList<>();
+            if (!FileStorage.loadAnimFile(animName, errors)) {
+                source.sendFeedback(() -> Text.literal("Failed to load original state of animation " + animName), false);
+                for (String err : errors) {
+                    source.sendFeedback(() -> Text.literal(err), false);
+                }
+                return -1;
+            }
+            source.sendFeedback(() -> Text.literal("Discarded changes made to animation " + animName), false);
+            // Get the reloaded animation from GlobalManager.animations from name
+            Animation reloadedAnimation = getAnimationFromName(animName, source);
+            if (reloadedAnimation != null) {
+                GlobalManager.curAnimation = reloadedAnimation;
+            }
+            else {
+                source.sendFeedback(() -> Text.literal("Failed to load original state of animation " + animName), false);
+                return -1;
+            }
+        }
         return 0;
     }
 }

@@ -3,6 +3,7 @@ package ast.animcreator.core;
 import ast.animcreator.utils.Utils;
 import net.minecraft.block.Blocks;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
@@ -53,17 +54,39 @@ public class Animation {
         }
     }
 
+    public boolean removeFrame(int tick) {
+        Frame frameToRemove = GlobalManager.curAnimation.getFrameForTick(tick);
+        if (frameToRemove == null) {
+            return false;
+        }
+        int frameIdx = frames.indexOf(frameToRemove);
+        if (frameIdx == -1) {
+            return false;
+        }
+
+        editedUnsaved = true;
+        if (frames.size() < 3) {
+            return true;
+        }
+        Frame prevFrame = (frameIdx != 0 ? frames.get(frameIdx - 1) : frames.get(frames.size() - 1));
+        Frame nextFrame = frames.get((frameIdx + 1) % frames.size());
+        nextFrame.updateBlocksToRemove(prevFrame);
+
+        frames.remove(frameToRemove);
+        return true;
+    }
+
     public List<Frame> getFrames() {
         return frames;
     }
 
-    public boolean frameTickAlreadyExists(Integer tick) {
+    public Frame getFrameForTick(Integer tick) {
         for (Frame frame : frames) {
             if (frame.tick.equals(tick)) {
-                return true;
+                return frame;
             }
         }
-        return false;
+        return null;
     }
 
     public void restart() {
@@ -124,6 +147,9 @@ public class Animation {
     }
 
     private void showFrame(int frameIdx) {
+        if (frames.isEmpty()) {
+            return;
+        }
         Frame newFrame = frames.get(frameIdx);
         for (FrameBlock frame : newFrame.blocksToRemove) {
             world.setBlockState(frame.blockPos, Blocks.AIR.getDefaultState());
@@ -147,7 +173,10 @@ public class Animation {
         canPlay = false;
     }
 
-    public void advanceOneFrame() {
+    public void forceAdvanceOneFrame() {
+        if (frames.isEmpty()) {
+            return;
+        }
         //NOTE clearAllAnimationBlocks is slow but this method is not real-time
         // just check if it is not TOO slow with a large animation
         clearAllAnimationBlocks();
@@ -162,7 +191,10 @@ public class Animation {
         showFrame(nextTickIdx);
     }
 
-    public void goBackOneFrame() {
+    public void forceGoBackOneFrame() {
+        if (frames.isEmpty()) {
+            return;
+        }
         clearAllAnimationBlocks();
         nextTickIdx = (nextTickIdx == 0 ? frames.size() - 1 : nextTickIdx - 1);
         if (nextTickIdx > 0) {
@@ -172,6 +204,10 @@ public class Animation {
             tickCounter = frames.get(nextTickIdx).tick;
         }
         showFrame(nextTickIdx);
+    }
+
+    public String getCurFrameInfo() {
+        return "Frame " + (nextTickIdx + 1) + " | Tick " + frames.get(nextTickIdx).tick;
     }
 
     @Override
