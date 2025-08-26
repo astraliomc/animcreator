@@ -1,19 +1,12 @@
 package ast.animcreator.core;
 
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.command.argument.BlockStateArgument;
+import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.dimension.DimensionTypes;
-import org.apache.commons.io.input.BOMInputStream;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -104,7 +97,15 @@ public class FileStorage {
                 fileContent.append(frameBlock.blockPos.getX()).append(" ")
                         .append(frameBlock.blockPos.getY()).append(" ")
                         .append(frameBlock.blockPos.getZ()).append(" ");
-                fileContent.append(frameBlock.blockState.getRegistryEntry().getIdAsString());
+
+                String blockStateStr = frameBlock.blockState.getBlock().getStateWithProperties(frameBlock.blockState).toString();
+                StringBuilder fileBlockStateStr = new StringBuilder(blockStateStr.length());
+                fileBlockStateStr.append(frameBlock.blockState.getRegistryEntry().getIdAsString());
+                int stateStartIndex = blockStateStr.indexOf("[");
+                if (stateStartIndex != -1) {
+                    fileBlockStateStr.append(blockStateStr.substring(blockStateStr.indexOf("[")));
+                }
+                fileContent.append(fileBlockStateStr);
                 fileContent.append('\n');
             }
         }
@@ -276,15 +277,17 @@ public class FileStorage {
                     int x = Integer.parseInt(parts[0]);
                     int y = Integer.parseInt(parts[1]);
                     int z = Integer.parseInt(parts[2]);
-                    String blockId = parts[3];
-                    String[] idParts = blockId.split(":");
-                    if (idParts.length != 2) {
-                        errors.add("Wrong block identifier in animation file " + filename + " at line " + lineNumber);
-                        return false;
+                    String blockStateStr = parts[3];
+
+                    BlockStateArgumentType argType = new BlockStateArgumentType(GlobalManager.commandRegistryAccess);
+                    try {
+                        BlockStateArgument arg =  argType.parse(new StringReader(blockStateStr));
+                        curFrame.blocks.add(new FrameBlock(arg.getBlockState(), new BlockPos(x,y,z)));
+                    }
+                    catch(CommandSyntaxException e) {
+                        System.out.println("Invalid block state in animation file " + filename + " at line " + lineNumber);
                     }
 
-                    Block block = Registries.BLOCK.get(Identifier.of(idParts[0], idParts[1]));
-                    curFrame.blocks.add(new FrameBlock(block.getDefaultState(), new BlockPos(x,y,z)));
                 }
                 catch(NumberFormatException e) {
                     errors.add("Error while loading animation file " + filename + " : wrong coordinate value at line " + lineNumber);

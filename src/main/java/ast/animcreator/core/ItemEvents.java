@@ -1,10 +1,14 @@
 package ast.animcreator.core;
 
+import com.google.common.collect.ImmutableList;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.block.BlockState;
+import net.minecraft.command.argument.BlockStateArgument;
+import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -17,7 +21,20 @@ public class ItemEvents {
 
     public static ActionResult firstRegionSelection(PlayerEntity player, World world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
-        world.setBlockState(pos, blockState);
+        //world.setBlockState(pos, blockState);
+
+        ImmutableList<BlockState> states = blockState.getBlock().getStateManager().getStates();
+        System.out.println("STATE");
+        System.out.println(blockState.getBlock().getStateWithProperties(blockState).toString());
+        String testState = "minecraft:birch_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]";
+        BlockStateArgumentType argType = new BlockStateArgumentType(GlobalManager.commandRegistryAccess);
+        try {
+            BlockStateArgument arg =  argType.parse(new StringReader(testState));
+            world.setBlockState(pos, arg.getBlockState());
+        }
+        catch(CommandSyntaxException e) {
+            System.out.println("ERREUR COMMAND SYNTAX ECSPCETION");
+        }
 
         player.sendMessage(Text.literal("First region corner set at [" + pos.getX() + ";" + pos.getY() + ";" + pos.getZ() + "]"), false);
         curRegionFirst = pos;

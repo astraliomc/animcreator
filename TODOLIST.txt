@@ -1,12 +1,16 @@
 - XT quand on fait ac_new et qu'on n'a pas sauvegadé l'animation courante, mettre un warning
-- ac_delete
+- XT ac_delete
 - XT ac_edit
-- ac_rename <old_name> <new_name>
+- XT ac_rename <old_name> <new_name>
 - ac_export
 - XT ac_discard : annuler les changements depuis la dernière save. S'il n'y en a pas (de save) suppr l'animation en cours de création
 - XT ac_rframe <tick> : suppr une frame
-- ac_list : afficher le nom de toutes les animations chargées avec la current mise en évidence
-- objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
+- XT ac_list : afficher le nom de toutes les animations chargées avec la current mise en évidence
+- XT objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
+- ac_playset <setname> <bool : reload_file> : joue un ensemble d'animations programmé dans le temps. Le booléen détermine s'il
+  faut recharger le fichier depuis le disque ou pas.
+  Avant le lancement : faire un clearAllAnimationBlocks sur toutes les anims
+- ac_stopset <setname> : arrête l'exécution du set en mettant en pause toutes les anims
 
 - XT quand on quitte le monde et qu'il y a une animation en cours :
  1) la sauvegarder dans un fichier .anim.tmp
@@ -16,13 +20,14 @@
 ---> faudrait-il en + mémoriser le nom de l'animation qui était en train d'être modifiée et de setter la curAnimation
 sur cette dernière quand on recharge le monde ? pour le moment non mais ce serait sûrement mieux
 
-- liste de suggestions quand on tape une commande /ac qui contient la liste de toutes les animations chargées
+- XT liste de suggestions quand on tape une commande /ac qui contient la liste de toutes les animations chargées
 - XT ne plus remettre l'animation dans sa position initiale quand on la joue sans mode loop
 - XT supprimer les enums state
 - XT items custom pour les fonctionnalités avec clic droit
 - XT voir pour faire une commande ac_unpause
-- fonctionnalité pour programmer l'exécution de plusieurs animations à une tick donnée
 
 - mettre en évidence la curAnimation en affichant côté client la hitbox de la région de la frame courante de l'animation courante
 - ajouter un objet qui permet de voir le nom de toutes les animations chargées au-dessus de là ou elles sont (label au milieu du
   haut de la hitbox de la 1e frame ?)
+
+- sauvegarder les block states complets des blocs des animations et les recharger

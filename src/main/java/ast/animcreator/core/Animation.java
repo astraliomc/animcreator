@@ -66,6 +66,7 @@ public class Animation {
 
         editedUnsaved = true;
         if (frames.size() < 3) {
+            frames.remove(frameToRemove);
             return true;
         }
         Frame prevFrame = (frameIdx != 0 ? frames.get(frameIdx - 1) : frames.get(frames.size() - 1));

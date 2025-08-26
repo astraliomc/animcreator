@@ -1,5 +1,6 @@
 package ast.animcreator.core;
 
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 public class GlobalManager {
     public static MinecraftServer server;
+    public static CommandRegistryAccess commandRegistryAccess;
 
     //NOTE si je veux supporter le multijoueur il faudrait faire une association 1 joueur -> 1 anim
     public static ServerPlayerEntity player;
