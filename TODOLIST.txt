@@ -7,10 +7,10 @@
 - XT ac_rframe <tick> : suppr une frame
 - XT ac_list : afficher le nom de toutes les animations chargées avec la current mise en évidence
 - XT objet avec lequel faire clic gauche/droit qui fait défiler les frames de l'animation courante dans un sens ou dans l'autre
-- ac_playset <setname> <bool : reload_file> : joue un ensemble d'animations programmé dans le temps. Le booléen détermine s'il
+- ac_playseq <setname> <bool : reload_file> : joue un ensemble d'animations programmé dans le temps. Le booléen détermine s'il
   faut recharger le fichier depuis le disque ou pas.
   Avant le lancement : faire un clearAllAnimationBlocks sur toutes les anims
-- ac_stopset <setname> : arrête l'exécution du set en mettant en pause toutes les anims
+- ac_stopseq <setname> : arrête l'exécution du set en mettant en pause toutes les anims
 
 - XT quand on quitte le monde et qu'il y a une animation en cours :
  1) la sauvegarder dans un fichier .anim.tmp
@@ -30,4 +30,4 @@ sur cette dernière quand on recharge le monde ? pour le moment non mais ce sera
 - ajouter un objet qui permet de voir le nom de toutes les animations chargées au-dessus de là ou elles sont (label au milieu du
   haut de la hitbox de la 1e frame ?)
 
-- sauvegarder les block states complets des blocs des animations et les recharger
+- XT sauvegarder les block states complets des blocs des animations et les recharger

@@ -19,12 +19,15 @@ import java.util.stream.Stream;
 
 public class FileStorage {
     public static String modDirName = "animcreator";
-    public static String internalStorageDirName = "internal";
+    public static String animFilesStorageDirName = "animations";
+    public static String seqFilesStorageDirName = "sequences";
     public static Path modPath;
-    public static Path internalStoragePath;
+    public static Path animFilesStoragePath;
+    public static Path seqFilesStoragePath;
 
     public final static String AnimFileExtension = ".anim";
     public final static String AnimTmpFileExtension = ".tmp";
+    public final static String SequenceFileExtension = ".seq";
 
     public static void initModStorageDir() {
 
@@ -40,10 +43,20 @@ public class FileStorage {
             }
         }
 
-        internalStoragePath = Path.of(modPath + "/" + internalStorageDirName);
-        if (!Files.exists(internalStoragePath)) {
+        animFilesStoragePath = Path.of(modPath + "/" + animFilesStorageDirName);
+        if (!Files.exists(animFilesStoragePath)) {
             try {
-                Files.createDirectory(internalStoragePath);
+                Files.createDirectory(animFilesStoragePath);
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        seqFilesStoragePath = Path.of(modPath + "/" + seqFilesStorageDirName);
+        if (!Files.exists(seqFilesStoragePath)) {
+            try {
+                Files.createDirectory(seqFilesStoragePath);
             }
             catch (IOException e) {
                 e.printStackTrace();
@@ -52,12 +65,12 @@ public class FileStorage {
     }
 
     public static boolean animExistsOnDisk(String animName) {
-        return Files.exists(Path.of(internalStoragePath + "/" + animName + AnimFileExtension)) ||
-                Files.exists(Path.of(internalStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension));
+        return Files.exists(Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension)) ||
+                Files.exists(Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension));
     }
 
     public static Path getAnimationPathFromName(String animName) {
-        Path animPath = Path.of(internalStoragePath + "/" + animName + AnimFileExtension);
+        Path animPath = Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension);
         if (Files.exists(animPath)) {
             return animPath;
         }
@@ -69,7 +82,7 @@ public class FileStorage {
     }
 
     public static Path getTmpAnimationPathFromName(String animName) {
-        return Path.of(internalStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension);
+        return Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension);
     }
 
     public static int saveAnimToFile(Animation animation, boolean isTemporary, List<String> errors) {
@@ -111,7 +124,7 @@ public class FileStorage {
         }
 
         FileWriter fr;
-        Path animFilePath = Path.of(internalStoragePath + "/" + animation.name + AnimFileExtension + (isTemporary ? AnimTmpFileExtension : ""));
+        Path animFilePath = Path.of(animFilesStoragePath + "/" + animation.name + AnimFileExtension + (isTemporary ? AnimTmpFileExtension : ""));
         try {
             fr = new FileWriter(animFilePath.toFile());
             fr.write(fileContent.toString());
@@ -129,7 +142,7 @@ public class FileStorage {
 
         // If there is a tmp anim file with the same name as the one just saved, delete it
         if (!isTemporary) {
-            Path tmpAnimFilePath = Path.of(internalStoragePath + "/" + animation.name + AnimFileExtension + AnimTmpFileExtension);
+            Path tmpAnimFilePath = Path.of(animFilesStoragePath + "/" + animation.name + AnimFileExtension + AnimTmpFileExtension);
             if (Files.exists(tmpAnimFilePath)) {
                 try {
                     Files.delete(tmpAnimFilePath);
@@ -153,7 +166,7 @@ public class FileStorage {
         errors.clear();
         List<Path> tmpAnimFilesToLoad = new ArrayList<>();
         try {
-            Stream<Path> stream = Files.list(internalStoragePath);
+            Stream<Path> stream = Files.list(animFilesStoragePath);
             stream.forEach((path) -> {
                 String fullFileName = path.getFileName().toString();
                 if (fullFileName.endsWith(AnimTmpFileExtension)) {
@@ -203,12 +216,10 @@ public class FileStorage {
             errors.add("File " + fullFilename + " is not an animation file (wrong extension)");
             return false;
         }
-        System.out.println(filename);
         // Reload existing animation, except the one that is being created/edited if there is one
         List<Animation> animationsToRemove = new ArrayList<>();
         for (Animation existingAnimation : GlobalManager.animations) {
             if (existingAnimation.name.equals(filename) && existingAnimation != GlobalManager.curAnimation) {
-                System.out.println("removing existing animation");
                 animationsToRemove.add(existingAnimation);
             }
         }
@@ -222,7 +233,7 @@ public class FileStorage {
             in = new BufferedReader(new InputStreamReader(fi, StandardCharsets.UTF_8));
             scanner = new Scanner(in);
         } catch (IOException e) {
-            errors.add("Failed to read directory where animations are stored (" + internalStoragePath.toString() + ")");
+            errors.add("Failed to read directory where animations are stored (" + animFilesStoragePath.toString() + ")");
             return false;
         }
 
@@ -293,13 +304,16 @@ public class FileStorage {
                     errors.add("Error while loading animation file " + filename + " : wrong coordinate value at line " + lineNumber);
                 }
             }
+            else {
+                errors.add("Syntax error in animation file " + filename + " at line " + lineNumber + " : wrong number of elements.");
+                return false;
+            }
         }
         if (curFrame != null) {
             animation.addFrame(curFrame);
         }
         scanner.close();
 
-        System.out.println(animation);
         GlobalManager.addAnimation(animation);
         return true;
     }
@@ -329,7 +343,7 @@ public class FileStorage {
             return false;
         }
 
-        String newPathStr = internalStoragePath + "/" + newName + AnimFileExtension;
+        String newPathStr = animFilesStoragePath + "/" + newName + AnimFileExtension;
         if (oldAnimFilePath.getFileName().toString().endsWith(AnimTmpFileExtension)) {
             newPathStr += AnimTmpFileExtension;
         }
@@ -345,4 +359,85 @@ public class FileStorage {
         }
         return true;
     }
+
+    public static int loadAllSeqFiles(List<String> errors) {
+        errors.clear();
+        try {
+            Stream<Path> stream = Files.list(seqFilesStoragePath);
+            stream.forEach((path) -> {
+                String fullFileName = path.getFileName().toString();
+                if (fullFileName.endsWith(SequenceFileExtension)) {
+                    boolean res = loadSeqFile(path, errors);
+                    if (!res) {
+                        errors.add("Failed to load sequence " + path.getFileName().toString());
+                    }
+                }
+            });
+        } catch (IOException e) {
+            return -1;
+        }
+        return 0;
+    }
+
+    private static boolean loadSeqFile(Path filePath, List<String> errors) {
+        String fullFilename = filePath.getFileName().toString();
+        String filename;
+        if (fullFilename.endsWith(SequenceFileExtension)) {
+            filename = fullFilename.substring(0, fullFilename.length() - (SequenceFileExtension.length()));
+        }
+        else {
+            errors.add("File " + fullFilename + " is not an sequence file (wrong extension)");
+            return false;
+        }
+
+        FileInputStream fi;
+        BufferedReader in;
+        Scanner scanner;
+        try {
+            fi = new FileInputStream(filePath.toFile());
+            in = new BufferedReader(new InputStreamReader(fi, StandardCharsets.UTF_8));
+            scanner = new Scanner(in);
+        } catch (IOException e) {
+            errors.add("Failed to read directory where animations are stored (" + animFilesStoragePath.toString() + ")");
+            return false;
+        }
+
+        Sequence seq = new Sequence();
+        int lineNumber = 1;
+        while(scanner.hasNextLine()) {
+            ++lineNumber;
+            String line = scanner.nextLine();
+            if (line.isEmpty()) continue;
+            String[] parts = line.split(" ");
+            if (parts.length != 2 && parts.length != 3) {
+                errors.add("Syntax error in sequence file " + filename + " at line " + lineNumber + " : wrong number of elements.");
+                return false;
+            }
+            String animName = parts[0];
+            Animation animation = GlobalManager.getAnimationFromName(animName);
+            if (animation == null) {
+                errors.add("Animation " + animName + " does not exist. Error at line " + lineNumber);
+                return false;
+            }
+            int tick;
+            try {
+                tick = Integer.parseUnsignedInt(parts[0]);
+            }
+            catch(NumberFormatException e) {
+                errors.add("Error while loading sequence file " + filename + " : wrong tick at line " + lineNumber);
+                return false;
+            }
+
+            boolean loop = false;
+            if (parts.length == 3) {
+                loop = Boolean.parseBoolean(parts[1]);
+            }
+            seq.addAnimToSequence(animation, tick, loop);
+        }
+        scanner.close();
+        GlobalManager.sequences.add(seq);
+
+        return true;
+    }
 }
+

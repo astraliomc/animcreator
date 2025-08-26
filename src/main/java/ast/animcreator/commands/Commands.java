@@ -24,7 +24,8 @@ public class Commands {
 
             GlobalManager.commandRegistryAccess = registryAccess;
 
-            FileNameSuggestions suggestions = new FileNameSuggestions();
+            AnimSuggestions animSuggestions = new AnimSuggestions();
+            SequenceSuggestions seqSuggestions = new SequenceSuggestions();
 
             dispatcher.register(CommandManager.literal("ac_new")
             .requires(source -> source.hasPermissionLevel(2))
@@ -34,13 +35,13 @@ public class Commands {
             dispatcher.register(CommandManager.literal("ac_edit")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acEditCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_rename")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("old_name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                     .then(CommandManager.argument("new_name", StringArgumentType.string())
                             .executes(context -> acRenameCommand(context, StringArgumentType.getString(context, "old_name"), StringArgumentType.getString(context, "new_name"))))));
 
@@ -48,7 +49,7 @@ public class Commands {
             dispatcher.register(CommandManager.literal("ac_delete")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acDeleteCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_discard")
@@ -57,12 +58,12 @@ public class Commands {
 
             dispatcher.register(CommandManager.literal("ac_frame")
                     .requires(source -> source.hasPermissionLevel(2))
-                    .then(CommandManager.argument("tick", IntegerArgumentType.integer())
+                    .then(CommandManager.argument("tick", IntegerArgumentType.integer(0))
                             .executes(context -> acFrameCommand(context, IntegerArgumentType.getInteger(context, "tick")))));
 
             dispatcher.register(CommandManager.literal("ac_rframe")
                     .requires(source -> source.hasPermissionLevel(2))
-                    .then(CommandManager.argument("tick", IntegerArgumentType.integer())
+                    .then(CommandManager.argument("tick", IntegerArgumentType.integer(0))
                             .executes(context -> acRframeCommand(context, IntegerArgumentType.getInteger(context, "tick")))));
 
             dispatcher.register(CommandManager.literal("ac_save")
@@ -73,14 +74,14 @@ public class Commands {
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acShowCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acShowCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_play")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acPlayCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name), false))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acPlayCommand(context, StringArgumentType.getString(context, "name"), false))
                             .then(CommandManager.argument("loop", BoolArgumentType.bool())
                                     .executes(context -> acPlayCommand(context, StringArgumentType.getString(context, "name"), BoolArgumentType.getBool(context, "loop"))))));
@@ -89,26 +90,38 @@ public class Commands {
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acPauseCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acPauseCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_resume")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acResumeCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acResumeCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_stop")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(context -> acStopCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name)))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(suggestions)
+                            .suggests(animSuggestions)
                             .executes(context -> acStopCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_list")
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(Commands::acListCommand));
+
+
+
+
+            dispatcher.register(CommandManager.literal("ac_playseq")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .suggests(seqSuggestions)
+                            .executes(context -> acPlaySeqCommand(context, StringArgumentType.getString(context, "name"), true))
+                            .then(CommandManager.argument("reload", BoolArgumentType.bool())
+                                    .executes(context -> acPlaySeqCommand(context, StringArgumentType.getString(context, "name"), BoolArgumentType.getBool(context, "reload"))))));
+
         }
     }
 
@@ -354,6 +367,24 @@ public class Commands {
         return 0;
     }
 
+    private static int acPlaySeqCommand(CommandContext<ServerCommandSource> context, String seqName, boolean reload) {
+        final ServerCommandSource source = context.getSource();
+        Sequence sequenceToPlay = null;
+        for (Sequence sequence : GlobalManager.sequences) {
+            if (sequence.name.equals(seqName)) {
+                sequenceToPlay = sequence;
+                break;
+            }
+        }
+        if (sequenceToPlay == null) {
+            source.sendFeedback(() -> Text.literal("Unknown sequence " + seqName), false);
+            return -1;
+        }
+
+
+        return 0;
+    }
+
     public static Animation getAnimationFromName(String animName, ServerCommandSource source) {
         if (animName.isEmpty()) {
             source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
@@ -363,10 +394,9 @@ public class Commands {
             return GlobalManager.curAnimation;
         }
         else {
-            for (Animation animation : GlobalManager.animations) {
-                if (animation.name.equals(animName)) {
-                    return animation;
-                }
+            Animation anim = GlobalManager.getAnimationFromName(animName);
+            if (anim != null) {
+                return anim;
             }
         }
         source.sendFeedback(() -> Text.literal("Unknown animation " + animName), false);

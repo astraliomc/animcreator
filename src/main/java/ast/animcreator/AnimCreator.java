@@ -71,6 +71,12 @@ public class AnimCreator implements ModInitializer {
 		for (String error : errors) {
 			System.err.println(error);
 		}
+
+		errors.clear();
+		FileStorage.loadAllSeqFiles(errors);
+		for (String error : errors) {
+			System.err.println(error);
+		}
 	}
 
 	private void onServerStopped(MinecraftServer server) {

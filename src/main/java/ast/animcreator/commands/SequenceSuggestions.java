@@ -2,19 +2,21 @@ package ast.animcreator.commands;
 
 import ast.animcreator.core.Animation;
 import ast.animcreator.core.GlobalManager;
+import ast.animcreator.core.Sequence;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.server.command.ServerCommandSource;
+
 import java.util.concurrent.CompletableFuture;
 
-public class FileNameSuggestions implements SuggestionProvider<ServerCommandSource> {
+public class SequenceSuggestions implements SuggestionProvider<ServerCommandSource> {
 
     @Override
     public CompletableFuture<Suggestions> getSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) {
-        for (Animation animation : GlobalManager.animations) {
-            builder.suggest(animation.name);
+        for (Sequence sequence : GlobalManager.sequences) {
+            builder.suggest(sequence.name);
         }
         return builder.buildFuture();
     }

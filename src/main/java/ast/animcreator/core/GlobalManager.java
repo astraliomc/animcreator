@@ -21,6 +21,7 @@ public class GlobalManager {
 
     //NOTE don't call add on this variable but the method addAnimation
     public static List<Animation> animations = new ArrayList<>();
+    public static List<Sequence> sequences = new ArrayList<>();
 
     public static boolean waitingDiscardConfirmation = false;
 
@@ -36,5 +37,14 @@ public class GlobalManager {
         if (animation == GlobalManager.curAnimation) {
             GlobalManager.curAnimation = null;
         }
+    }
+
+    public static Animation getAnimationFromName(String animName) {
+        for (Animation animation : GlobalManager.animations) {
+            if (animation.name.equals(animName)) {
+                return animation;
+            }
+        }
+        return null;
     }
 }

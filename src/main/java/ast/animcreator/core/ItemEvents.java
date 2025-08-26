@@ -21,20 +21,7 @@ public class ItemEvents {
 
     public static ActionResult firstRegionSelection(PlayerEntity player, World world, BlockPos pos) {
         BlockState blockState = world.getBlockState(pos);
-        //world.setBlockState(pos, blockState);
-
-        ImmutableList<BlockState> states = blockState.getBlock().getStateManager().getStates();
-        System.out.println("STATE");
-        System.out.println(blockState.getBlock().getStateWithProperties(blockState).toString());
-        String testState = "minecraft:birch_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]";
-        BlockStateArgumentType argType = new BlockStateArgumentType(GlobalManager.commandRegistryAccess);
-        try {
-            BlockStateArgument arg =  argType.parse(new StringReader(testState));
-            world.setBlockState(pos, arg.getBlockState());
-        }
-        catch(CommandSyntaxException e) {
-            System.out.println("ERREUR COMMAND SYNTAX ECSPCETION");
-        }
+        world.setBlockState(pos, blockState);
 
         player.sendMessage(Text.literal("First region corner set at [" + pos.getX() + ";" + pos.getY() + ";" + pos.getZ() + "]"), false);
         curRegionFirst = pos;
