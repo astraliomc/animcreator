@@ -122,6 +122,23 @@ public class Commands {
                             .then(CommandManager.argument("reload", BoolArgumentType.bool())
                                     .executes(context -> acPlaySeqCommand(context, StringArgumentType.getString(context, "name"), BoolArgumentType.getBool(context, "reload"))))));
 
+            dispatcher.register(CommandManager.literal("ac_stopseq")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .suggests(animSuggestions)
+                            .executes(context -> acStopSeqCommand(context, StringArgumentType.getString(context, "name")))));
+
+            dispatcher.register(CommandManager.literal("ac_pauseseq")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .suggests(animSuggestions)
+                            .executes(context -> acPauseSeqCommand(context, StringArgumentType.getString(context, "name")))));
+            dispatcher.register(CommandManager.literal("ac_resumeseq")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("name", StringArgumentType.string())
+                            .suggests(animSuggestions)
+                            .executes(context -> acResumeSeqCommand(context, StringArgumentType.getString(context, "name")))));
+
         }
     }
 
@@ -173,9 +190,7 @@ public class Commands {
                 animationToRename.name = newName;
             }
             else {
-                for (String error : errors) {
-                    source.sendFeedback(() -> Text.literal(error), false);
-                }
+                logErrors(source, errors);
                 return -1;
             }
         }
@@ -197,9 +212,7 @@ public class Commands {
                 source.sendFeedback(() -> Text.literal("Successfully deleted animation " + animName), false);
             }
             else {
-                for (String error : errors) {
-                    source.sendFeedback(() -> Text.literal(error), false);
-                }
+                logErrors(source, errors);
                 return -1;
             }
         }
@@ -283,9 +296,7 @@ public class Commands {
         List<String> errors = new ArrayList<>();
         if (FileStorage.saveAnimToFile(animation, false, errors) != 0) {
             source.sendFeedback(() -> Text.literal("Can not save animation " + animation.name), false);
-            for (String error : errors) {
-                source.sendFeedback(() -> Text.literal(error), false);
-            }
+            logErrors(source, errors);
             return -1;
         }
         source.sendFeedback(() -> Text.literal("Successfully saved animation " + animation.name), false);
@@ -369,18 +380,63 @@ public class Commands {
 
     private static int acPlaySeqCommand(CommandContext<ServerCommandSource> context, String seqName, boolean reload) {
         final ServerCommandSource source = context.getSource();
-        Sequence sequenceToPlay = null;
-        for (Sequence sequence : GlobalManager.sequences) {
-            if (sequence.name.equals(seqName)) {
-                sequenceToPlay = sequence;
-                break;
+        Sequence sequenceToPlay = getSequenceFromName(seqName);
+
+        if (sequenceToPlay == null || reload) {
+            //NOTE il y aura peut-être autre chose à faire en + de la suppr de la liste
+            SeqPlayer.sequencestoPlay.remove(sequenceToPlay);
+            List<String> errors = new ArrayList<>();
+            sequenceToPlay = FileStorage.loadSeqFile(seqName, errors);
+            if (sequenceToPlay == null) {
+                logErrors(source, errors);
+                return -1;
             }
+            SeqPlayer.sequencestoPlay.add(sequenceToPlay);
         }
-        if (sequenceToPlay == null) {
+
+        sequenceToPlay.forceRestart();
+
+        return 0;
+    }
+
+    private static int acPauseSeqCommand(CommandContext<ServerCommandSource> context, String seqName) {
+        final ServerCommandSource source = context.getSource();
+
+        Sequence sequenceToStop = getSequenceFromName(seqName);
+        if (sequenceToStop == null) {
             source.sendFeedback(() -> Text.literal("Unknown sequence " + seqName), false);
             return -1;
         }
 
+        sequenceToStop.pauseSequence();
+
+        return 0;
+    }
+
+    private static int acResumeSeqCommand(CommandContext<ServerCommandSource> context, String seqName) {
+        final ServerCommandSource source = context.getSource();
+
+        Sequence sequenceToStop = getSequenceFromName(seqName);
+        if (sequenceToStop == null) {
+            source.sendFeedback(() -> Text.literal("Unknown sequence " + seqName), false);
+            return -1;
+        }
+
+        sequenceToStop.resumeSequence();
+
+        return 0;
+    }
+
+    private static int acStopSeqCommand(CommandContext<ServerCommandSource> context, String seqName) {
+        final ServerCommandSource source = context.getSource();
+
+        Sequence sequenceToStop = getSequenceFromName(seqName);
+        if (sequenceToStop == null) {
+            source.sendFeedback(() -> Text.literal("Unknown sequence " + seqName), false);
+            return -1;
+        }
+
+        sequenceToStop.stopSequence();
 
         return 0;
     }
@@ -400,6 +456,15 @@ public class Commands {
             }
         }
         source.sendFeedback(() -> Text.literal("Unknown animation " + animName), false);
+        return null;
+    }
+
+    private static Sequence getSequenceFromName(String seqName) {
+        for (Sequence sequence : SeqPlayer.sequencestoPlay) {
+            if (sequence.name.equals(seqName)) {
+                return sequence;
+            }
+        }
         return null;
     }
 
@@ -433,9 +498,7 @@ public class Commands {
             List<String> errors = new ArrayList<>();
             if (!FileStorage.loadAnimFile(animName, errors)) {
                 source.sendFeedback(() -> Text.literal("Failed to load original state of animation " + animName), false);
-                for (String err : errors) {
-                    source.sendFeedback(() -> Text.literal(err), false);
-                }
+                logErrors(source, errors);
                 return -1;
             }
             source.sendFeedback(() -> Text.literal("Discarded changes made to animation " + animName), false);
@@ -450,6 +513,12 @@ public class Commands {
             }
         }
         return 0;
+    }
+
+    private static void logErrors(ServerCommandSource source, List<String> errors) {
+        for (String err : errors) {
+            source.sendFeedback(() -> Text.literal(err), false);
+        }
     }
 }
 

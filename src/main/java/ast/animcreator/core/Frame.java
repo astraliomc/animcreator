@@ -95,26 +95,22 @@ public class Frame {
     public void updateBlocksToRemove(Frame prevFrame) {
         blocksToRemove.clear();
         for (FrameBlock prevFrameBlock : prevFrame.blocks) {
-            System.out.println("prevFrameBlock " + prevFrameBlock.toString());
             // if prevFrameBlock is not in region of curFrame, it needs to be removed
             if ((prevFrameBlock.blockPos.getX() < region.cornerMin.getX() || prevFrameBlock.blockPos.getX() > region.cornerMax.getX()) &&
                 (prevFrameBlock.blockPos.getY() < region.cornerMin.getY() || prevFrameBlock.blockPos.getY() > region.cornerMax.getY()) &&
                 (prevFrameBlock.blockPos.getZ() < region.cornerMin.getZ() || prevFrameBlock.blockPos.getZ() > region.cornerMax.getZ())) {
-                System.out.println("remove block 1");
                 blocksToRemove.add(prevFrameBlock);
                 continue;
             }
             // otherwise check if there is a block with the same coords in the curFrame
             boolean removeBlock = true;
             for (FrameBlock curFrameBlock : blocks) {
-                System.out.println("curFrameBlock " + curFrameBlock.toString());
                 if (curFrameBlock.blockPos.equals(prevFrameBlock.blockPos)) {
                     removeBlock = false;
                     break;
                 }
             }
             if (removeBlock) {
-                System.out.println("remove block 2");
                 blocksToRemove.add(prevFrameBlock);
             }
         }

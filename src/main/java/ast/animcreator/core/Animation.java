@@ -29,7 +29,9 @@ public class Animation {
         this.name = name;
         this.world = world;
         this.loopAnim = false;
-        restart();
+        this.tickCounter = 0;
+        this.nextTickIdx = 0;
+        this.canPlay = false;
     }
 
     public void addFrame(Frame f) {

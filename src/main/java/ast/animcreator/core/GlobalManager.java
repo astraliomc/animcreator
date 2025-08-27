@@ -21,7 +21,6 @@ public class GlobalManager {
 
     //NOTE don't call add on this variable but the method addAnimation
     public static List<Animation> animations = new ArrayList<>();
-    public static List<Sequence> sequences = new ArrayList<>();
 
     public static boolean waitingDiscardConfirmation = false;
 

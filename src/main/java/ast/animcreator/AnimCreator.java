@@ -50,6 +50,7 @@ public class AnimCreator implements ModInitializer {
 		UseBlockCallback.EVENT.register(this::UseBlockCallback);
 		AttackBlockCallback.EVENT.register(this::AttackBlockCallback);
 
+		ServerTickEvents.END_SERVER_TICK.register(SeqPlayer::onEndTick);
 		ServerTickEvents.END_SERVER_TICK.register(AnimPlayer::onEndTick);
 
 		ModItems.registerModItems();

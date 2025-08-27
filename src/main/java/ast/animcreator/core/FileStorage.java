@@ -81,8 +81,12 @@ public class FileStorage {
         return null;
     }
 
-    public static Path getTmpAnimationPathFromName(String animName) {
-        return Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension);
+    public static Path getSequencePathFromName(String seqName) {
+        Path animPath = Path.of(seqFilesStoragePath + "/" + seqName + SequenceFileExtension);
+        if (Files.exists(animPath)) {
+            return animPath;
+        }
+        return null;
     }
 
     public static int saveAnimToFile(Animation animation, boolean isTemporary, List<String> errors) {
@@ -367,8 +371,11 @@ public class FileStorage {
             stream.forEach((path) -> {
                 String fullFileName = path.getFileName().toString();
                 if (fullFileName.endsWith(SequenceFileExtension)) {
-                    boolean res = loadSeqFile(path, errors);
-                    if (!res) {
+                    Sequence seq = loadSeqFile(path, errors);
+                    if (seq != null) {
+                        SeqPlayer.sequencestoPlay.add(seq);
+                    }
+                    else {
                         errors.add("Failed to load sequence " + path.getFileName().toString());
                     }
                 }
@@ -379,7 +386,16 @@ public class FileStorage {
         return 0;
     }
 
-    private static boolean loadSeqFile(Path filePath, List<String> errors) {
+    public static Sequence loadSeqFile(String seqName, List<String> errors) {
+        Path seqFilepath = getSequencePathFromName(seqName);
+        if (seqFilepath == null) {
+            errors.add("Sequence " + seqName + "does not exist on disk.");
+            return null;
+        }
+        return FileStorage.loadSeqFile(seqFilepath, errors);
+    }
+
+    private static Sequence loadSeqFile(Path filePath, List<String> errors) {
         String fullFilename = filePath.getFileName().toString();
         String filename;
         if (fullFilename.endsWith(SequenceFileExtension)) {
@@ -387,7 +403,7 @@ public class FileStorage {
         }
         else {
             errors.add("File " + fullFilename + " is not an sequence file (wrong extension)");
-            return false;
+            return null;
         }
 
         FileInputStream fi;
@@ -399,10 +415,10 @@ public class FileStorage {
             scanner = new Scanner(in);
         } catch (IOException e) {
             errors.add("Failed to read directory where animations are stored (" + animFilesStoragePath.toString() + ")");
-            return false;
+            return null;
         }
 
-        Sequence seq = new Sequence();
+        Sequence seq = new Sequence(filename);
         int lineNumber = 1;
         while(scanner.hasNextLine()) {
             ++lineNumber;
@@ -411,33 +427,36 @@ public class FileStorage {
             String[] parts = line.split(" ");
             if (parts.length != 2 && parts.length != 3) {
                 errors.add("Syntax error in sequence file " + filename + " at line " + lineNumber + " : wrong number of elements.");
-                return false;
+                return null;
             }
             String animName = parts[0];
             Animation animation = GlobalManager.getAnimationFromName(animName);
             if (animation == null) {
                 errors.add("Animation " + animName + " does not exist. Error at line " + lineNumber);
-                return false;
+                return null;
             }
             int tick;
             try {
-                tick = Integer.parseUnsignedInt(parts[0]);
+                tick = Integer.parseUnsignedInt(parts[1]);
             }
             catch(NumberFormatException e) {
                 errors.add("Error while loading sequence file " + filename + " : wrong tick at line " + lineNumber);
-                return false;
+                return null;
             }
 
             boolean loop = false;
             if (parts.length == 3) {
-                loop = Boolean.parseBoolean(parts[1]);
+                loop = Boolean.parseBoolean(parts[2]);
             }
-            seq.addAnimToSequence(animation, tick, loop);
+            if (!seq.addAnimToSequence(animation, tick, loop)) {
+                errors.add("Animation " + animName + " is invalid. Error at line " + lineNumber);
+                return null;
+            }
         }
         scanner.close();
-        GlobalManager.sequences.add(seq);
-
-        return true;
+        System.out.println("FINAL SEQ");
+        System.out.println(seq);
+        return seq;
     }
 }
 

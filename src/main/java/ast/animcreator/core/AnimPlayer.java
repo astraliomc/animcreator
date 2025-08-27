@@ -16,13 +16,11 @@ public class AnimPlayer {
         boolean alreadyExists = false;
         for (Animation animPlaying : animationPlayingList) {
             if (animPlaying.name.equals(animation.name)) {
-                System.out.println("already exists!");
                 alreadyExists = true;
                 break;
             }
         }
         if (!alreadyExists) {
-            System.out.println("don't already exist!");
             animationPlayingList.add(animation);
         }
     }
