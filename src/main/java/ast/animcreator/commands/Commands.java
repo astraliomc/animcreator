@@ -3,6 +3,7 @@ package ast.animcreator.commands;
 import ast.animcreator.core.*;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -56,10 +57,17 @@ public class Commands {
                     .requires(source -> source.hasPermissionLevel(2))
                     .executes(Commands::acDiscardCommand));
 
+            //TODO rajouter un mode pour ac_frame avec 2 arguments :
+            // 1er arg = numéro de la frame
+            // 2e arg = nouvelle tick de la frame
+            // Penser à retrier la liste !
             dispatcher.register(CommandManager.literal("ac_frame")
                     .requires(source -> source.hasPermissionLevel(2))
-                    .then(CommandManager.argument("tick", IntegerArgumentType.integer(0))
-                            .executes(context -> acFrameCommand(context, IntegerArgumentType.getInteger(context, "tick")))));
+                    .then(CommandManager.argument("tick", IntegerArgumentType.integer(1))
+                            .executes(context -> acNewFrameCommand(context, IntegerArgumentType.getInteger(context, "tick"))))
+                    .then(CommandManager.argument("frame", IntegerArgumentType.integer(1))
+                            .then(CommandManager.argument("tick", IntegerArgumentType.integer(1))
+                            .executes(context -> acEditFrameCommand(context, IntegerArgumentType.getInteger(context, "frame"), IntegerArgumentType.getInteger(context, "tick"))))));
 
             dispatcher.register(CommandManager.literal("ac_rframe")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -85,6 +93,22 @@ public class Commands {
                             .executes(context -> acPlayCommand(context, StringArgumentType.getString(context, "name"), false))
                             .then(CommandManager.argument("loop", BoolArgumentType.bool())
                                     .executes(context -> acPlayCommand(context, StringArgumentType.getString(context, "name"), BoolArgumentType.getBool(context, "loop"))))));
+
+            dispatcher.register(CommandManager.literal("ac_slowdown")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("factor", FloatArgumentType.floatArg(1))
+                            .executes(context -> acSlowDownCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name), FloatArgumentType.getFloat(context, "factor")))
+                            .then(CommandManager.argument("name", StringArgumentType.string())
+                                    .suggests(animSuggestions)
+                                    .executes(context -> acSlowDownCommand(context, StringArgumentType.getString(context, "name"), FloatArgumentType.getFloat(context, "factor"))))));
+
+            dispatcher.register(CommandManager.literal("ac_speedup")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("factor", FloatArgumentType.floatArg(1))
+                            .executes(context -> acSpeedUpCommand(context, (GlobalManager.curAnimation == null ? "" : GlobalManager.curAnimation.name), FloatArgumentType.getFloat(context, "factor")))
+                            .then(CommandManager.argument("name", StringArgumentType.string())
+                                    .suggests(animSuggestions)
+                                    .executes(context -> acSpeedUpCommand(context, StringArgumentType.getString(context, "name"), FloatArgumentType.getFloat(context, "factor"))))));
 
             dispatcher.register(CommandManager.literal("ac_pause")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -125,18 +149,18 @@ public class Commands {
             dispatcher.register(CommandManager.literal("ac_stopseq")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(animSuggestions)
+                            .suggests(seqSuggestions)
                             .executes(context -> acStopSeqCommand(context, StringArgumentType.getString(context, "name")))));
 
             dispatcher.register(CommandManager.literal("ac_pauseseq")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(animSuggestions)
+                            .suggests(seqSuggestions)
                             .executes(context -> acPauseSeqCommand(context, StringArgumentType.getString(context, "name")))));
             dispatcher.register(CommandManager.literal("ac_resumeseq")
                     .requires(source -> source.hasPermissionLevel(2))
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                            .suggests(animSuggestions)
+                            .suggests(seqSuggestions)
                             .executes(context -> acResumeSeqCommand(context, StringArgumentType.getString(context, "name")))));
 
         }
@@ -222,6 +246,7 @@ public class Commands {
         return 0;
     }
 
+    //TODO rajouter string animName en option
     private static int acDiscardCommand(CommandContext<ServerCommandSource> context) {
         final ServerCommandSource source = context.getSource();
 
@@ -238,7 +263,8 @@ public class Commands {
         return discardChanges(source);
     }
 
-    private static int acFrameCommand(CommandContext<ServerCommandSource> context, Integer tick) {
+    //TODO rajouter string animName en option
+    private static int acNewFrameCommand(CommandContext<ServerCommandSource> context, Integer tick) {
         final ServerCommandSource source = context.getSource();
 
         if (GlobalManager.curAnimation == null) {
@@ -268,6 +294,26 @@ public class Commands {
         return 0;
     }
 
+    //TODO rajouter string animName en option
+    private static int acEditFrameCommand(CommandContext<ServerCommandSource> context, Integer frame, Integer tick) {
+        final ServerCommandSource source = context.getSource();
+
+        if (GlobalManager.curAnimation == null) {
+            source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
+            return -1;
+        }
+
+        Animation animation = GlobalManager.curAnimation;
+
+        //TODO tester
+        if (!animation.moveFrame(frame, tick)) {
+            //error
+        }
+
+        return 0;
+    }
+
+    //TODO rajouter string animName en option
     private static int acRframeCommand(CommandContext<ServerCommandSource> context, Integer tick) {
         final ServerCommandSource source = context.getSource();
 
@@ -285,6 +331,11 @@ public class Commands {
         return 0;
     }
 
+    //TODO rajouter string animName ici pour pouvoir sauvegarder n'importe quelle animation chargée.
+    // Etant donné que je compte faire en sorte que toutes les commandes d'édition d'animations prennent
+    // le nom de l'anim en paramètre, l'anim en cours d'édition n'est pas forcément la seule à avoir
+    // été modifiée. Rajouter aussi une étoile sur chaque anim qui a "editedUnsaved" à true dans l'output
+    // de la commande ac_list ainsi qu'une commande ac_saveall)
     private static int acSaveCommand(CommandContext<ServerCommandSource> context) {
         final ServerCommandSource source = context.getSource();
         Animation animation = GlobalManager.curAnimation;
@@ -378,6 +429,46 @@ public class Commands {
         return 0;
     }
 
+    private static int acSlowDownCommand(CommandContext<ServerCommandSource> context, String animName, Float factor) {
+        final ServerCommandSource source = context.getSource();
+        Animation animation = getAnimationFromName(animName, source);
+        if (animation != null) {
+            animation.slowDown(factor);
+            source.sendFeedback(() -> Text.literal("Animation was slowed down by a factor of " + factor), false);
+        }
+        else {
+            return -1;
+        }
+        return 0;
+    }
+
+    private static int acSpeedUpCommand(CommandContext<ServerCommandSource> context, String animName, Float factor) {
+        final ServerCommandSource source = context.getSource();
+        Animation animation = getAnimationFromName(animName, source);
+        if (animation != null) {
+            if (!animation.speedUp(factor)) {
+                source.sendFeedback(() -> Text.literal("Can not speed up this animation by this factor (too high)"), false);
+            }
+        }
+        else {
+            return -1;
+        }
+        return 0;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     private static int acPlaySeqCommand(CommandContext<ServerCommandSource> context, String seqName, boolean reload) {
         final ServerCommandSource source = context.getSource();
         Sequence sequenceToPlay = getSequenceFromName(seqName);
@@ -441,7 +532,7 @@ public class Commands {
         return 0;
     }
 
-    public static Animation getAnimationFromName(String animName, ServerCommandSource source) {
+    public static Animation  getAnimationFromName(String animName, ServerCommandSource source) {
         if (animName.isEmpty()) {
             source.sendFeedback(() -> Text.literal("Not currently creating or modifying an animation."), false);
             return null;
@@ -495,6 +586,7 @@ public class Commands {
             source.sendFeedback(() -> Text.literal("Discarded animation " + animName), false);
         }
         else {
+            /// Reloading original state of animation from disk
             List<String> errors = new ArrayList<>();
             if (!FileStorage.loadAnimFile(animName, errors)) {
                 source.sendFeedback(() -> Text.literal("Failed to load original state of animation " + animName), false);

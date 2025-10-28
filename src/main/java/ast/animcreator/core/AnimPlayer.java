@@ -11,6 +11,7 @@ public class AnimPlayer {
 
     public static void addAnimationToPlay(Animation animation, boolean loopAnim) {
         animation.loopAnim = loopAnim;
+        //TODO si l'anim existe déjà et qu'elle loop, il ne faut pas la forceRestart si ?? (tester avec les séquences)
         animation.forceRestart = true;
 
         boolean alreadyExists = false;

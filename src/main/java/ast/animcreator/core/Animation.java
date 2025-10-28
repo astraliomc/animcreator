@@ -44,12 +44,16 @@ public class Animation {
         if (frames.size() == 1) {
             return;
         }
+        // Looping over all the sorted frames because we need to edit the one before and the one after
+        // the one that was just added
         for (int frameIdx = 0 ; frameIdx < frames.size() ; ++frameIdx) {
             Frame frame = frames.get(frameIdx);
             if (frame == f) {
                 Frame prevFrame = (frameIdx != 0 ? frames.get(frameIdx - 1) : frames.get(frames.size() - 1));
                 Frame nextFrame = frames.get((frameIdx + 1) % frames.size());
+                // set blocks to remove for newly added frame using previous frame
                 frame.updateBlocksToRemove(prevFrame);
+                // update blocks to remove of next frame because its previous frame is now the newly added one
                 nextFrame.updateBlocksToRemove(frame);
                 break;
             }
@@ -69,8 +73,11 @@ public class Animation {
         editedUnsaved = true;
         if (frames.size() < 3) {
             frames.remove(frameToRemove);
+            // No need to update blocks to remove if there was only 1 or 2 frames
             return true;
         }
+
+        // Update blocks to remove of the next frame using the previous frame of the deleted one
         Frame prevFrame = (frameIdx != 0 ? frames.get(frameIdx - 1) : frames.get(frames.size() - 1));
         Frame nextFrame = frames.get((frameIdx + 1) % frames.size());
         nextFrame.updateBlocksToRemove(prevFrame);
@@ -104,22 +111,25 @@ public class Animation {
     }
 
     public void clearAllAnimationBlocks() {
-        List<BlockPos> blocksToRemove = new ArrayList<>();
+        List<BlockPos> allBlocksToRemove = new ArrayList<>();
+        /// Getting all unique block positions of all the frames
         for (Frame frame : frames) {
             for (FrameBlock frameBlock : frame.blocks) {
+                /// Checking if current block position was already added in the list
                 boolean alreadyInList = false;
-                for (BlockPos blockToRemove : blocksToRemove) {
+                for (BlockPos blockToRemove : allBlocksToRemove) {
                     if (blockToRemove.equals(frameBlock.blockPos)) {
                         alreadyInList = true;
                         break;
                     }
                 }
                 if (!alreadyInList) {
-                    blocksToRemove.add(frameBlock.blockPos);
+                    allBlocksToRemove.add(frameBlock.blockPos);
                 }
             }
         }
-        for (BlockPos blockToRemove : blocksToRemove) {
+        /// Removing all blocks
+        for (BlockPos blockToRemove : allBlocksToRemove) {
             world.setBlockState(blockToRemove, Blocks.AIR.getDefaultState());
         }
     }
@@ -133,7 +143,9 @@ public class Animation {
             return;
         }
 
+        /// At tick 0 or if we reached a new frame
         if (nextTickIdx == 0 || tickCounter == frames.get(nextTickIdx - 1).tick) {
+            /// If we reached the last frame, reset internal values and check if anim needs to loop
             if (nextTickIdx >= frames.size()) {
                 restart();
                 if (!loopAnim) {
@@ -154,9 +166,11 @@ public class Animation {
             return;
         }
         Frame newFrame = frames.get(frameIdx);
+        /// Step 1 : remove the blocks which were in the previous frame but not in the new one
         for (FrameBlock frame : newFrame.blocksToRemove) {
             world.setBlockState(frame.blockPos, Blocks.AIR.getDefaultState());
         }
+        /// Step 2 : set the new blocks of the new frame
         for (FrameBlock frame : newFrame.blocks) {
             world.setBlockState(frame.blockPos, frame.blockState);
         }
@@ -209,6 +223,52 @@ public class Animation {
         showFrame(nextTickIdx);
     }
 
+    public void slowDown(float factor) {
+        for (Frame f : frames) {
+            f.tick = (int)((float)f.tick * factor);
+        }
+    }
+
+    public boolean speedUp(float factor) {
+        if (frames.isEmpty()) {
+            return false;
+        }
+
+        List<Integer> newTicks = new ArrayList<>(frames.size());
+        int firstTick = frames.get(0).tick;
+        boolean isFirst = true;
+        for (Frame f : frames) {
+            int newTick = (int)((float)f.tick / factor);
+            if ((isFirst && newTick <= 0) || (!isFirst && newTick <= firstTick)) {
+                return false;
+            }
+            newTicks.add(newTick);
+            firstTick = newTick;
+            isFirst = false;
+        }
+
+        for (int newTickIdx = 0 ; newTickIdx < newTicks.size() ; ++newTickIdx) {
+            frames.get(newTickIdx).tick = newTicks.get(newTickIdx);
+        }
+        return true;
+    }
+
+    public boolean moveFrame(Integer frameNumber, Integer newTick) {
+        if (frameNumber < 1 || frameNumber > frames.size() + 1) {
+            return false;
+        }
+        Frame oldFrame = frames.get(frameNumber - 1);
+        Frame newFrame = new Frame(oldFrame.animation, oldFrame.tick, oldFrame.region);
+        newFrame.blocks = oldFrame.blocks;
+        removeFrame(oldFrame.tick);
+        addFrame(newFrame);
+        return true;
+    }
+
+    public boolean canPlay() {
+        return canPlay;
+    }
+
     public String getCurFrameInfo() {
         return "Frame " + (nextTickIdx + 1) + " | Tick " + frames.get(nextTickIdx).tick;
     }
@@ -218,7 +278,7 @@ public class Animation {
         StringBuilder str = new StringBuilder("Summary of animation " + name + "[" + world.getDimension().effects().toString() + "]\n");
         for (int idxFrame = 0 ; idxFrame < frames.size() ; ++idxFrame) {
             Frame frame = frames.get(idxFrame);
-            str.append("Frame ").append(idxFrame).append(" : tick ").append(frame.tick);
+            str.append("Frame ").append(idxFrame + 1).append(" : tick ").append(frame.tick);
             if (frame.region != null) {
                 str.append(" [").append(Utils.blockPosStr(frame.region.cornerMax)).append(" -> ").append(Utils.blockPosStr(frame.region.cornerMin)).append("]\n");
             }
@@ -227,9 +287,5 @@ public class Animation {
             }
         }
         return str.toString();
-    }
-
-    public boolean canPlay() {
-        return canPlay;
     }
 }

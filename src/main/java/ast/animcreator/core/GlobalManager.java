@@ -19,14 +19,17 @@ public class GlobalManager {
 
     public final static Integer MAX_REGION_SIZE = 65536;
 
-    //NOTE don't call add on this variable but the method addAnimation
+    // Stores all the animations loaded
+    // NOTE don't call add on this variable but the method addAnimation
     public static List<Animation> animations = new ArrayList<>();
 
     public static boolean waitingDiscardConfirmation = false;
 
     public static void addAnimation(Animation animation) {
         animation.editedUnsaved = false;
-        animations.add(animation);
+        if (getAnimationFromName(animation.name) == null) {
+            animations.add(animation);
+        }
     }
 
     public static void removeAnimation(Animation animation) {

@@ -171,8 +171,10 @@ public class FileStorage {
         List<Path> tmpAnimFilesToLoad = new ArrayList<>();
         try {
             Stream<Path> stream = Files.list(animFilesStoragePath);
+            System.out.println("STREAM DECL");
             stream.forEach((path) -> {
                 String fullFileName = path.getFileName().toString();
+                System.out.println("LOAD FILE " + fullFileName);
                 if (fullFileName.endsWith(AnimTmpFileExtension)) {
                     tmpAnimFilesToLoad.add(path);
                 }
@@ -252,7 +254,6 @@ public class FileStorage {
 
         ServerWorld animWorld = null;
         for (ServerWorld world : GlobalManager.server.getWorlds()) {
-            System.out.println("SERVER WORLD " + world.getDimensionEntry().getKey().get().getValue().toString());
             if (world.getDimensionEntry().getKey().get().getValue().toString().equals(dimension)) {
                 animWorld = world;
                 break;

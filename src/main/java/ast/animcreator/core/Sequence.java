@@ -91,6 +91,7 @@ public class Sequence {
             }
             restart();
             if (!loopSeq) {
+                /// Stop sequence : pausing all looping animations (non-looping animations are automatically paused when they finish playing)
                 canPlay = false;
                 for (SequenceAnim seqAnim : seq) {
                     if (seqAnim.loop) {
