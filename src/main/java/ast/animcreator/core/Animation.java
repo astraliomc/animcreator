@@ -258,8 +258,9 @@ public class Animation {
             return false;
         }
         Frame oldFrame = frames.get(frameNumber - 1);
-        Frame newFrame = new Frame(oldFrame.animation, oldFrame.tick, oldFrame.region);
+        Frame newFrame = new Frame(oldFrame.animation, newTick, oldFrame.region);
         newFrame.blocks = oldFrame.blocks;
+
         removeFrame(oldFrame.tick);
         addFrame(newFrame);
         return true;

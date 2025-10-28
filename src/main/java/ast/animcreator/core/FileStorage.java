@@ -65,16 +65,23 @@ public class FileStorage {
     }
 
     public static boolean animExistsOnDisk(String animName) {
-        return Files.exists(Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension)) ||
-                Files.exists(Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension + AnimTmpFileExtension));
+        return (getAnimationPathFromName(animName) != null);
+    }
+
+    private static String buildAnimationPathFromName(String animName, boolean isTmp) {
+        String result = animFilesStoragePath + "/" + animName + AnimFileExtension;
+        if (isTmp) {
+            result += AnimTmpFileExtension;
+        }
+        return result;
     }
 
     public static Path getAnimationPathFromName(String animName) {
-        Path animPath = Path.of(animFilesStoragePath + "/" + animName + AnimFileExtension);
+        Path animPath = Path.of(buildAnimationPathFromName(animName, false));
         if (Files.exists(animPath)) {
             return animPath;
         }
-        Path tmpAnimPath = Path.of(animPath + AnimTmpFileExtension);
+        Path tmpAnimPath = Path.of(buildAnimationPathFromName(animName, true));
         if (Files.exists(tmpAnimPath)) {
             return tmpAnimPath;
         }
@@ -128,7 +135,7 @@ public class FileStorage {
         }
 
         FileWriter fr;
-        Path animFilePath = Path.of(animFilesStoragePath + "/" + animation.name + AnimFileExtension + (isTemporary ? AnimTmpFileExtension : ""));
+        Path animFilePath = Path.of(buildAnimationPathFromName(animation.name, isTemporary));
         try {
             fr = new FileWriter(animFilePath.toFile());
             fr.write(fileContent.toString());
@@ -146,7 +153,7 @@ public class FileStorage {
 
         // If there is a tmp anim file with the same name as the one just saved, delete it
         if (!isTemporary) {
-            Path tmpAnimFilePath = Path.of(animFilesStoragePath + "/" + animation.name + AnimFileExtension + AnimTmpFileExtension);
+            Path tmpAnimFilePath = Path.of(buildAnimationPathFromName(animation.name, true));
             if (Files.exists(tmpAnimFilePath)) {
                 try {
                     Files.delete(tmpAnimFilePath);
@@ -171,10 +178,8 @@ public class FileStorage {
         List<Path> tmpAnimFilesToLoad = new ArrayList<>();
         try {
             Stream<Path> stream = Files.list(animFilesStoragePath);
-            System.out.println("STREAM DECL");
             stream.forEach((path) -> {
                 String fullFileName = path.getFileName().toString();
-                System.out.println("LOAD FILE " + fullFileName);
                 if (fullFileName.endsWith(AnimTmpFileExtension)) {
                     tmpAnimFilesToLoad.add(path);
                 }
@@ -343,17 +348,17 @@ public class FileStorage {
 
     public static boolean renameAnimFile(String oldName, String newName, List<String> errors) {
         Path oldAnimFilePath = FileStorage.getAnimationPathFromName(oldName);
+        Path newAnimFilePath = FileStorage.getAnimationPathFromName(newName);
         if (oldAnimFilePath == null) {
             errors.add("Animation " + oldName + "does not exist on disk.");
             return false;
         }
-
-        String newPathStr = animFilesStoragePath + "/" + newName + AnimFileExtension;
-        if (oldAnimFilePath.getFileName().toString().endsWith(AnimTmpFileExtension)) {
-            newPathStr += AnimTmpFileExtension;
+        if (newAnimFilePath != null) {
+            errors.add("Animation " + newName  + "already exists on disk.");
+            return false;
         }
 
-        Path newAnimFilePath = Path.of(newPathStr);
+        newAnimFilePath = Path.of(buildAnimationPathFromName(newName, oldAnimFilePath.getFileName().toString().endsWith(AnimTmpFileExtension)));
         try {
             Files.move(oldAnimFilePath, newAnimFilePath);
         }
@@ -363,6 +368,30 @@ public class FileStorage {
             return false;
         }
         return true;
+    }
+
+    public static boolean copyAnimFile(String srcName, String dstName, List<String> errors) {
+        Path srcAnimFilePath = FileStorage.getAnimationPathFromName(srcName);
+        Path dstAnimFilePath = FileStorage.getAnimationPathFromName(dstName);
+        if (srcAnimFilePath == null) {
+            errors.add("Animation " + srcName + "does not exist on disk.");
+            return false;
+        }
+        if (dstAnimFilePath != null) {
+            errors.add("Animation " + srcName + "already exists on disk.");
+            return false;
+        }
+
+        dstAnimFilePath = Path.of(buildAnimationPathFromName(dstName, false));
+        try {
+            Files.copy(srcAnimFilePath, dstAnimFilePath);
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+            errors.add("Internal error while copying animation file.");
+            return false;
+        }
+        return loadAnimFile(dstName, errors);
     }
 
     public static int loadAllSeqFiles(List<String> errors) {

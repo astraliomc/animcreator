@@ -46,6 +46,13 @@ public class Commands {
                     .then(CommandManager.argument("new_name", StringArgumentType.string())
                             .executes(context -> acRenameCommand(context, StringArgumentType.getString(context, "old_name"), StringArgumentType.getString(context, "new_name"))))));
 
+            dispatcher.register(CommandManager.literal("ac_copy")
+                    .requires(source -> source.hasPermissionLevel(2))
+                    .then(CommandManager.argument("src_name", StringArgumentType.string())
+                            .suggests(animSuggestions)
+                            .then(CommandManager.argument("dst_name", StringArgumentType.string())
+                                    .executes(context -> acCopyCommand(context, StringArgumentType.getString(context, "src_name"), StringArgumentType.getString(context, "dst_name"))))));
+
 
             dispatcher.register(CommandManager.literal("ac_delete")
                     .requires(source -> source.hasPermissionLevel(2))
@@ -207,18 +214,33 @@ public class Commands {
     private static int acRenameCommand(CommandContext<ServerCommandSource> context, String oldName, String newName) {
         final ServerCommandSource source = context.getSource();
         Animation animationToRename = getAnimationFromName(oldName, source);
-        if (animationToRename != null) {
-            List<String> errors = new ArrayList<>();
-            if (FileStorage.renameAnimFile(oldName, newName, errors)) {
-                source.sendFeedback(() -> Text.literal("Successfully renamed animation from " + oldName + " to " + newName), false);
-                animationToRename.name = newName;
-            }
-            else {
-                logErrors(source, errors);
-                return -1;
-            }
+        if (animationToRename == null) {
+            return -1;
+        }
+        List<String> errors = new ArrayList<>();
+        if (FileStorage.renameAnimFile(oldName, newName, errors)) {
+            source.sendFeedback(() -> Text.literal("Successfully renamed animation from " + oldName + " to " + newName), false);
+            animationToRename.name = newName;
         }
         else {
+            logErrors(source, errors);
+            return -1;
+        }
+        return 0;
+    }
+
+    private static int acCopyCommand(CommandContext<ServerCommandSource> context, String srcName, String dstName) {
+        final ServerCommandSource source = context.getSource();
+        Animation animationToCopy = getAnimationFromName(srcName, source);
+        if (animationToCopy == null) {
+            return -1;
+        }
+        List<String> errors = new ArrayList<>();
+        if (FileStorage.copyAnimFile(srcName, dstName, errors)) {
+            source.sendFeedback(() -> Text.literal("Successfully copied animation " + srcName + " as " + dstName), false);
+        }
+        else {
+            logErrors(source, errors);
             return -1;
         }
         return 0;
@@ -305,15 +327,16 @@ public class Commands {
 
         Animation animation = GlobalManager.curAnimation;
 
-        //TODO tester
         if (!animation.moveFrame(frame, tick)) {
-            //error
+            source.sendFeedback(() -> Text.literal("Invalid frame number."), false);
+            return -1;
         }
 
         return 0;
     }
 
     //TODO rajouter string animName en option
+    //NOTE plutôt mettre l'id de la frame au lieu de la tick ?
     private static int acRframeCommand(CommandContext<ServerCommandSource> context, Integer tick) {
         final ServerCommandSource source = context.getSource();
 
